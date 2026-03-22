@@ -110,7 +110,7 @@ function injectStyles() {
 }
 
 async function callClaude(system, user, webSearch = false) {
-  const body = { model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages:[{ role:"user", content:user }] };
+  const body: any = { model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages:[{ role:"user", content:user }] };
   if (webSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),

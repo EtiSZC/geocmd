@@ -824,89 +824,86 @@ function ProfileScreen({ player, theaters, onBack, onReset }) {
 export default function GeoCommand() {
   useEffect(() => injectStyles(), []);
   const [screen, setScreen]   = useState("init");
-  const [player, setPlayer]   = useState(null);
-  const [theaters, setTheaters] = useState([]);
-  const [activeIdx, setActiveIdx] = useState(null);
+  const [player, setPlayer]   = useState<any>(null);
+  const [theaters, setTheaters] = useState<any[]>([]);
+  const [activeIdx, setActiveIdx] = useState<number|null>(null);
 
-  // Persist helper — full replace of player data
-  const persistP = (email, updates) => {
-    try {
-      const existing = ldP(email);
-      svP(email, { ...existing, ...updates });
-    } catch {}
-  };
-
-  // Bootstrap: restore last session from per-player storage
+  // Bootstrap: restore last session from Supabase
   useEffect(() => {
-    try {
-      const meta = ldMeta();
-      if (meta.email) {
-        const d = ldP(meta.email);
-        if (d.player) {
-          setPlayer(d.player);
-          setTheaters(d.theaters || []);
-          setScreen("hub");
-          return;
+    (async () => {
+      try {
+        const meta = ldMeta();
+        if (meta.email) {
+          const p = await loadPlayerByEmail(meta.email);
+          if (p) {
+            setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id });
+            const t = await loadTheaters(p.id);
+            setTheaters(t);
+            setScreen("hub");
+            return;
+          }
         }
-      }
-    } catch {}
-    setScreen("login");
+      } catch {}
+      setScreen("login");
+    })();
   }, []);
 
-  // Login: restore existing player data, never overwrite
-  const handleLogin = (p) => {
-    let restoredTheaters = [];
-    try { restoredTheaters = ldP(p.email).theaters || []; } catch {}
-    setPlayer(p);
-    setTheaters(restoredTheaters);
-    try { persistP(p.email, { player: p, theaters: restoredTheaters }); } catch {}
-    try { svMeta({ email: p.email }); } catch {}
+  const handleLogin = useCallback(async (p: any) => {
+    const dbPlayer = await upsertPlayer(p.email, p.callsign);
+    if (!dbPlayer) { setScreen("login"); return; }
+    const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id };
+    const t = await loadTheaters(dbPlayer.id);
+    setPlayer(playerObj);
+    setTheaters(t);
+    svMeta({ email: p.email });
     setScreen("hub");
-  };
+  }, []);
 
-  const handleAddScenario = (scenario) => {
-    const newT = { scenario, history: [], consequence: null };
+  const handleAddScenario = useCallback(async (scenario: any) => {
+    if (!player) return;
+    const dbT = await insertTheater(player.dbId, scenario);
+    if (!dbT) return;
+    const newT = { dbId: dbT.id, scenario, history: [], consequence: null };
     const updated = [...theaters, newT];
     setTheaters(updated);
-    persistP(player.email, { theaters: updated });
     setActiveIdx(updated.length - 1);
     setScreen("theater");
-  };
+  }, [player, theaters]);
 
-  const handleOpenTheater = (i) => { setActiveIdx(i); setScreen("theater"); };
+  const handleOpenTheater = (i: number) => { setActiveIdx(i); setScreen("theater"); };
 
-  const handleDropTheater = (i) => {
-    const updated = theaters.filter((_, idx) => idx !== i);
-    setTheaters(updated);
-    persistP(player.email, { theaters: updated });
-  };
+  const handleDropTheater = useCallback(async (i: number) => {
+    const t = theaters[i];
+    if (t?.dbId) await deleteTheater(t.dbId);
+    setTheaters(prev => prev.filter((_, idx) => idx !== i));
+  }, [theaters]);
 
-  const handleDecisionMade = (index, action, consequence) => {
+  const handleDecisionMade = useCallback((index: number, action: any, consequence: any) => {
     setTheaters(prev => {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         const today = fmtDate();
-        const alreadyLogged = t.history.some(h => h.date === today);
+        const alreadyLogged = t.history.some((h: any) => h.date === today);
         const newHistory = alreadyLogged
           ? t.history
           : [...t.history, { date: today, actionLabel: action.label, actionId: action.id }];
-        return { ...t, history: newHistory, consequence: consequence !== null ? consequence : t.consequence };
+        const newConsequence = consequence !== null ? consequence : t.consequence;
+        // Persist to DB
+        if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: newConsequence });
+        return { ...t, history: newHistory, consequence: newConsequence };
       });
-      persistP(player.email, { theaters: updated });
       return updated;
     });
-  };
+  }, []);
 
-  const handleReset = () => {
-    // Toujours réinitialiser l'état React en premier
+  const handleReset = useCallback(async () => {
+    if (player?.dbId) await deletePlayerAndTheaters(player.dbId);
     setPlayer(null);
     setTheaters([]);
     setActiveIdx(null);
     setScreen("login");
-    // Nettoyage storage best-effort
-    try { if (player) localStorage.removeItem(`${KEY}:${player.email}`); } catch {}
-    try { svMeta({}); } catch {}
-  };
+    svMeta({});
+  }, [player]);
 
   return (
     <div className="gc">
@@ -917,7 +914,7 @@ export default function GeoCommand() {
         )}
         {screen==="init"&&(
           <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <TerminalLoader messages={["INITIALISATION DU SYSTÈME..."]}/>
+            <TerminalLoader messages={["INITIALISATION DU SYSTÈME...","CONNEXION BASE DE DONNÉES..."]}/>
           </div>
         )}
         {screen==="login"&&<LoginScreen onLogin={handleLogin}/>}

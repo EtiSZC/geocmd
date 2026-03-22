@@ -14,7 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      players: {
+        Row: {
+          callsign: string
+          created_at: string
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          callsign: string
+          created_at?: string
+          email: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          callsign?: string
+          created_at?: string
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      theaters: {
+        Row: {
+          consequence: string | null
+          created_at: string
+          history: Json
+          id: string
+          player_id: string
+          scenario: Json
+          updated_at: string
+        }
+        Insert: {
+          consequence?: string | null
+          created_at?: string
+          history?: Json
+          id?: string
+          player_id: string
+          scenario: Json
+          updated_at?: string
+        }
+        Update: {
+          consequence?: string | null
+          created_at?: string
+          history?: Json
+          id?: string
+          player_id?: string
+          scenario?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theaters_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

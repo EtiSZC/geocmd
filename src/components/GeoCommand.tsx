@@ -110,19 +110,13 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-async function callClaude(system, user, webSearch = false) {
-  const body: any = { model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages:[{ role:"user", content:user }] };
-  if (webSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
+async function callAI(type: string, params: Record<string, any> = {}) {
+  const { data, error } = await supabase.functions.invoke("geocmd-ai", {
+    body: { type, ...params },
   });
-  const d = await r.json();
-  const raw = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
-  // Strip <cite ...>...</cite> keeping inner text, then any residual bare tags
-  return raw
-    .replace(/<cite[^>]*>([\s\S]*?)<\/cite>/g, "$1")
-    .replace(/<\/?cite[^>]*>/g, "")
-    .trim();
+  if (error) throw error;
+  if (!data?.success) throw new Error(data?.error || "AI error");
+  return data.data;
 }
 
 function parseJ(raw) {

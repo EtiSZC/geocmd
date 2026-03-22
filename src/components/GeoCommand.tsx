@@ -488,14 +488,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
     setPhase("confirmed");
     (async () => {
       try {
-        const raw = await callClaude(
-          `Tu es un système de simulation géopolitique. Réponds UNIQUEMENT en JSON valide.`,
-          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole}.
-Action: ${selAction.label} — ${selAction.desc||""}
-Résultat projeté: ${selAction.outcome}
-JSON: {"headline":"Titre accrocheur","narrative":"2-3 phrases réalistes.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}]}`
-        );
-        const parsed = parseJ(raw);
+        const parsed = await callAI("consequence", { scenario, action: selAction });
         if (parsed) onDecisionMade(theaterIndex, selAction, parsed);
       } catch {}
     })();

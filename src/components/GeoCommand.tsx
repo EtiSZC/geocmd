@@ -386,14 +386,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await callClaude(
-          `Tu es un système d'intelligence géopolitique. Réponds UNIQUEMENT en JSON valide, aucun texte autour.`,
-          `Recherche les crises géopolitiques actives dans le monde en ce moment. Génère exactement 6 scénarios variés.
-JSON (tableau uniquement):
-[{"id":"slug","title":"Titre","region":"Zone","type":"conflit armé|tension diplomatique|rivalité économique|crise interne","playerRole":"Rôle","playerCountry":"Pays","description":"2 phrases factuelles basées sur l'actualité réelle.","urgency":4}]
-Urgency 1-5. Varie obligatoirement régions et types.`, true
-        );
-        const p = parseJ(raw);
+        const p = await callAI("scenarios");
         setScenarios(Array.isArray(p)&&p.length>=3 ? p : FALLBACK_SCENARIOS);
       } catch { setScenarios(FALLBACK_SCENARIOS); }
       setLoading(false);

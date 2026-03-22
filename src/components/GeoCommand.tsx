@@ -462,14 +462,10 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
       let brief = null;
       try {
         const hctx = history.length
-          ? `Décisions précédentes: ${history.slice(-3).map(h=>h.actionLabel).join("; ")}.`
-          : "Première session.";
-        const raw = await callClaude(
-          `Tu es un système de briefing d'intelligence classifié. Réponds UNIQUEMENT en JSON valide.`,
-          `Recherche l'actualité récente: "${scenario.title}" (${scenario.playerCountry}). ${hctx}
-JSON: {"classification":"TRÈS SECRET","situation":"2 phrases factuelles.","keyDevelopments":["Dev 1","Dev 2","Dev 3"],"assessment":"Analyse en 2 phrases.","threatLevel":"ÉLEVÉ","coords":"48°52'N, 2°21'E"}`, true
-        );
-        brief = parseJ(raw) || FB_BRIEFING(scenario);
+          ? history.slice(-3).map(h=>h.actionLabel)
+          : [];
+        brief = await callAI("briefing", { scenario, history: history.slice(-3) });
+        if (!brief || !brief.situation) brief = FB_BRIEFING(scenario);
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
       setBriefing(brief);

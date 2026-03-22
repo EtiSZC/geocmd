@@ -1,0 +1,895 @@
+import { useState, useEffect } from "react";
+
+function injectStyles() {
+  if (document.getElementById("gc-styles")) return;
+  const s = document.createElement("style");
+  s.id = "gc-styles";
+  s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500&display=swap');
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    .gc {
+      --bg:#060810; --surf:#0a0f1c; --brd:#162030; --brd2:#1e2e48;
+      --gold:#c8a84b; --green:#00e87a; --red:#ff3344; --blue:#4d8eff;
+      --txt:#dce4f0; --muted:#5a6a88; --muted2:#2e3e56;
+      font-family:'Barlow',sans-serif; background:var(--bg); color:var(--txt);
+      min-height:100vh; position:relative; overflow-x:hidden;
+    }
+    .gc::before {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.011) 3px,rgba(255,255,255,0.011) 4px);
+    }
+    .gc::after {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(ellipse 55% 40% at 10% 65%,rgba(200,168,75,0.07) 0%,transparent 70%),
+        radial-gradient(ellipse 40% 30% at 90% 15%,rgba(0,232,122,0.04) 0%,transparent 65%);
+    }
+    .gc-grid {
+      position:fixed; inset:0; z-index:0; pointer-events:none;
+      background-image:linear-gradient(rgba(22,32,48,0.55) 1px,transparent 1px),linear-gradient(90deg,rgba(22,32,48,0.55) 1px,transparent 1px);
+      background-size:38px 38px;
+    }
+    .gc-z { position:relative; z-index:1; }
+    .gc-h { font-family:'Rajdhani',sans-serif; }
+    .gc-m { font-family:'Share Tech Mono',monospace; }
+    .gc-header {
+      position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between;
+      padding:12px 20px; background:rgba(6,8,16,0.94); backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--brd);
+    }
+    .gc-panel { background:var(--surf); border:1px solid var(--brd); position:relative; }
+    .gc-panel::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,rgba(200,168,75,0.45),transparent);
+    }
+    .gc-btn {
+      display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+      padding:11px 22px; font-family:'Rajdhani',sans-serif; font-size:14px;
+      font-weight:600; letter-spacing:2.5px; text-transform:uppercase;
+      border:1px solid var(--gold); background:transparent; color:var(--gold);
+      clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+      transition:all .18s; white-space:nowrap;
+    }
+    .gc-btn:hover:not(:disabled) { background:var(--gold); color:var(--bg); }
+    .gc-btn:disabled { opacity:.33; cursor:not-allowed; }
+    .gc-btn.ghost { border-color:var(--brd2); color:var(--muted); clip-path:none; font-size:12px; }
+    .gc-btn.ghost:hover:not(:disabled) { border-color:var(--muted); color:var(--txt); background:transparent; }
+    .gc-btn.danger { border-color:rgba(255,51,68,.4); color:var(--red); clip-path:none; }
+    .gc-btn.full { width:100%; justify-content:center; }
+    .gc-input {
+      background:rgba(6,8,16,.85); border:1px solid var(--brd); color:var(--txt);
+      font-family:'Share Tech Mono',monospace; font-size:13px; padding:11px 14px;
+      width:100%; outline:none; transition:border-color .2s;
+    }
+    .gc-input:focus { border-color:var(--gold); }
+    .gc-input::placeholder { color:var(--muted2); }
+    .gc-label { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:2.5px; color:var(--muted); display:block; margin-bottom:7px; }
+    .gc-badge { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2.5px; padding:3px 7px; border:1px solid; }
+    .gc-badge.ts { border-color:var(--red); color:var(--red); }
+    .gc-badge.c  { border-color:var(--gold); color:var(--gold); }
+    .gc-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 7px var(--green); animation:blink 2.2s ease-in-out infinite; }
+    .gc-dot.orange { background:#ff8800; box-shadow:0 0 7px #ff8800; }
+    .gc-dot.grey   { background:var(--muted2); box-shadow:none; animation:none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .gc-theater {
+      background:var(--surf); border:1px solid var(--brd); padding:18px 20px;
+      cursor:pointer; transition:all .2s; position:relative; overflow:hidden;
+    }
+    .gc-theater::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; transition:background .2s; }
+    .gc-theater:hover { border-color:var(--brd2); }
+    .gc-theater.done::after    { background:var(--muted2); }
+    .gc-theater.pending::after { background:var(--gold); }
+    .gc-action { background:var(--surf); border:1px solid var(--brd); padding:16px; cursor:pointer; transition:all .18s; position:relative; }
+    .gc-action::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:transparent; transition:background .18s; }
+    .gc-action:hover { border-color:var(--brd2); background:#0d1522; }
+    .gc-action:hover::after { background:var(--gold); }
+    .gc-action.sel { border-color:var(--gold); background:rgba(200,168,75,.07); }
+    .gc-action.sel::after { background:var(--gold); }
+    .gc-scenario { background:var(--surf); border:1px solid var(--brd); padding:20px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+    .gc-scenario::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:transparent; transition:background .2s; }
+    .gc-scenario:hover { border-color:var(--brd2); transform:translateY(-1px); }
+    .gc-scenario:hover::before, .gc-scenario.sel::before { background:var(--gold); }
+    .gc-scenario.sel { border-color:var(--gold); }
+    .gc-scenario.disabled { opacity:.38; cursor:not-allowed; pointer-events:none; }
+    .gc-div { height:1px; background:linear-gradient(90deg,transparent,var(--brd2),transparent); margin:20px 0; }
+    .gc-risk { font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px; padding:2px 6px; border:1px solid; }
+    .gc-risk.lo { border-color:var(--green); color:var(--green); }
+    .gc-risk.md { border-color:#ff8800; color:#ff8800; }
+    .gc-risk.hi { border-color:var(--red); color:var(--red); }
+    .gc-cat { font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1.5px; padding:2px 7px; border:1px solid; }
+    .gc-consequence { border-left:3px solid var(--gold); padding:16px 18px; background:rgba(200,168,75,.05); }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .gc-fade { animation:fadeUp .35s ease forwards; }
+    @keyframes slideR { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+    .gc-slide { animation:slideR .28s ease forwards; }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--brd2); border-radius:2px; }
+  `;
+  document.head.appendChild(s);
+}
+
+async function callClaude(system, user, webSearch = false) {
+  const body = { model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages:[{ role:"user", content:user }] };
+  if (webSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
+  });
+  const d = await r.json();
+  const raw = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  // Strip <cite ...>...</cite> keeping inner text, then any residual bare tags
+  return raw
+    .replace(/<cite[^>]*>([\s\S]*?)<\/cite>/g, "$1")
+    .replace(/<\/?cite[^>]*>/g, "")
+    .trim();
+}
+
+function parseJ(raw) {
+  try {
+    const m = raw.match(/```(?:json)?\n?([\s\S]*?)\n?```/) || raw.match(/(\[[\s\S]*?\]|\{[\s\S]*?\})/s);
+    return JSON.parse(m ? m[1] : raw);
+  } catch { return null; }
+}
+
+const KEY      = "geocmd_v2";
+const META_KEY = "geocmd_meta"; // stores last logged-in email
+
+// Per-player storage (keyed by email)
+const ldP  = (email) => { try { return JSON.parse(localStorage.getItem(`${KEY}:${email}`) || "{}"); } catch { return {}; } };
+const svP  = (email, d) => localStorage.setItem(`${KEY}:${email}`, JSON.stringify(d));
+
+// Meta (last session)
+const ldMeta = () => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
+const svMeta = (d) => localStorage.setItem(META_KEY, JSON.stringify(d));
+
+const fmtDate = () => new Date().toLocaleDateString("fr-FR");
+const MAX_THEATERS = 4;
+
+const FALLBACK_SCENARIOS = [
+  { id:"ukraine",      title:"Guerre en Ukraine",             region:"Europe de l'Est",  type:"Conflit armé",          playerRole:"Chef d'État-Major",    playerCountry:"Ukraine",         description:"Le front s'est stabilisé mais une nouvelle offensive russe est signalée au nord-est.", urgency:5 },
+  { id:"taiwan",       title:"Crise du Détroit de Taïwan",    region:"Asie-Pacifique",   type:"Tension diplomatique",  playerRole:"Président",            playerCountry:"Taïwan",          description:"La marine chinoise intensifie ses exercices. Washington réaffirme son soutien.", urgency:4 },
+  { id:"sahel",        title:"Instabilité au Sahel",          region:"Afrique de l'Ouest", type:"Conflit armé",        playerRole:"Commandant en Chef",   playerCountry:"CEDEAO",          description:"Les groupes jihadistes progressent. Le Groupe Wagner étend son influence.", urgency:4 },
+  { id:"terres-rares", title:"Guerre des Terres Rares",       region:"Global",            type:"Rivalité économique",  playerRole:"Ministre Industrie",   playerCountry:"Union Européenne",description:"La Chine restreint ses exportations de minéraux critiques. L'Europe réagit.", urgency:3 },
+  { id:"proche-orient",title:"Tensions au Proche-Orient",     region:"Moyen-Orient",      type:"Conflit armé",         playerRole:"Premier Ministre",     playerCountry:"Israël",          description:"Escalade des tensions régionales. Les négociations de cessez-le-feu sont au point mort.", urgency:5 },
+  { id:"coree",        title:"Crise Péninsule Coréenne",      region:"Asie du Nord-Est",  type:"Tension diplomatique", playerRole:"Cmd Forces Alliées",   playerCountry:"Corée du Sud",    description:"Pyongyang intensifie ses tests balistiques. Séoul renforce sa posture.", urgency:4 },
+];
+
+const FB_BRIEFING = s => ({
+  classification:"TRÈS SECRET",
+  situation:`Situation dégradée sur le théâtre ${s.title}. Les 24 dernières heures exigent une décision de commandement immédiate.`,
+  keyDevelopments:["Mouvements adverses confirmés par imagerie satellite.", "Signal diplomatique ambigu reçu via canal secondaire.", "Pression logistique croissante sur les lignes alliées."],
+  assessment:"La fenêtre d'action optimale est estimée à 48-72h. Une inaction favorise l'initiative adverse.",
+  threatLevel:"ÉLEVÉ", coords:"48°52'N, 2°21'E"
+});
+
+const FB_ACTIONS = [
+  { id:"a1", label:"Renforcer les positions défensives",   cat:"militaire",      catColor:"#ff3344", desc:"Consolider les lignes et positionner les réserves en profondeur.", risk:"faible",  outcome:"Stabilisation sous 48h, initiative concédée à l'adversaire." },
+  { id:"a2", label:"Ouvrir un canal diplomatique secret",  cat:"diplomatique",   catColor:"#00e87a", desc:"Négociations discrètes via intermédiaire neutre.", risk:"modéré", outcome:"Désescalade possible, risque de fuite médiatique." },
+  { id:"a3", label:"Opération de renseignement HUMINT",    cat:"renseignement",  catColor:"#4d8eff", desc:"Déployer des actifs clandestins dans les cercles adverses.", risk:"élevé",  outcome:"Gain informationnel critique, risque d'incident diplomatique." },
+  { id:"a4", label:"Pression économique ciblée",           cat:"économique",     catColor:"#c8a84b", desc:"Sanctions sectorielles pour asphyxier les capacités adverses.", risk:"modéré", outcome:"Affaiblissement progressif sous 30 jours." },
+];
+
+function TerminalLoader({ messages=[] }) {
+  const [vis, setVis] = useState(0);
+  useEffect(() => {
+    const ts = messages.map((_,i) => setTimeout(()=>setVis(i+1), i*560));
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  return (
+    <div style={{ padding:"40px 24px", minHeight:180, display:"flex", flexDirection:"column", justifyContent:"center" }}>
+      <div className="gc-m" style={{ fontSize:12, color:"#00e87a", lineHeight:2.1 }}>
+        {messages.slice(0,vis).map((l,i) => <div key={i} className="gc-slide"><span style={{color:"#c8a84b"}}>▸ </span>{l}</div>)}
+        {vis <= messages.length && <span style={{animation:"blink .9s infinite"}}>█</span>}
+      </div>
+    </div>
+  );
+}
+
+function Header({ player, theaters, onProfile }) {
+  const pendingCount = theaters.filter(t => !t.history.some(h => h.date === fmtDate())).length;
+  return (
+    <header className="gc-header">
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <span className="gc-h" style={{ fontSize:20, fontWeight:700, letterSpacing:4, color:"#c8a84b" }}>
+          GEO<span style={{color:"#dce4f0"}}>CMD</span>
+        </span>
+        {theaters.length > 0 && (
+          <span className="gc-m" style={{ fontSize:10, color: pendingCount > 0 ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
+            {pendingCount > 0 ? `${pendingCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
+          </span>
+        )}
+      </div>
+      {player && (
+        <button onClick={onProfile} style={{ background:"transparent", border:"1px solid #162030", cursor:"pointer", fontFamily:"Share Tech Mono", fontSize:11, color:"#5a6a88", padding:"5px 12px", display:"flex", alignItems:"center", gap:6, transition:"all .2s" }}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8a84b";e.currentTarget.style.color="#c8a84b";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#162030";e.currentTarget.style.color="#5a6a88";}}
+        >◈ {player.callsign}</button>
+      )}
+    </header>
+  );
+}
+
+function LoginScreen({ onLogin }) {
+  const [callsign, setCallsign] = useState("");
+  const [email, setEmail] = useState("");
+  const ok = callsign.trim().length >= 2 && email.includes("@");
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:400 }} className="gc-fade">
+        <div style={{ textAlign:"center", marginBottom:44 }}>
+          <div className="gc-h" style={{ fontSize:46, fontWeight:700, letterSpacing:8, color:"#c8a84b", lineHeight:1 }}>GEO<span style={{color:"#dce4f0"}}>CMD</span></div>
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3.5, marginTop:10 }}>COMMANDEMENT STRATÉGIQUE GLOBAL</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:7, marginTop:14 }}>
+            <span className="gc-dot"/><span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:2 }}>RÉSEAU SIGINT ACTIF — {fmtDate()}</span>
+          </div>
+        </div>
+        <div className="gc-panel" style={{ padding:26 }}>
+          <div style={{ marginBottom:16 }}>
+            <label className="gc-label">INDICATIF D'APPEL</label>
+            <input className="gc-input" placeholder="EX: AIGLE-01 / ÉLYSÉE / KREMLIN" value={callsign} onChange={e=>setCallsign(e.target.value.toUpperCase())} />
+          </div>
+          <div style={{ marginBottom:24 }}>
+            <label className="gc-label">EMAIL D'ACCRÉDITATION</label>
+            <input className="gc-input" type="email" placeholder="operateur@geocmd.net" value={email} onChange={e=>setEmail(e.target.value)} />
+          </div>
+          <button className="gc-btn full" disabled={!ok} onClick={()=>onLogin({callsign,email})}>▸ ACCÉDER AU COMMANDEMENT</button>
+        </div>
+        <div className="gc-m" style={{ fontSize:9, color:"#1e2e48", textAlign:"center", marginTop:14, lineHeight:2, letterSpacing:1.5 }}>
+          ACCÈS RÉSERVÉ AUX OPÉRATEURS CERTIFIÉS NIVEAU 5<br/>TOUTES LES DÉCISIONS SONT JOURNALISÉES
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater }) {
+  const today = fmtDate();
+  const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:480, margin:"0 auto" }} className="gc-fade">
+
+      {/* Greeting */}
+      <div style={{ marginBottom:36 }}>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>COMMANDEMENT</div>
+        <h1 className="gc-h" style={{ fontSize:32, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h1>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginTop:6 }}>{today}</div>
+      </div>
+
+      {/* Empty state */}
+      {theaters.length === 0 && (
+        <div style={{ textAlign:"center", padding:"48px 0" }}>
+          <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", letterSpacing:3, marginBottom:20 }}>AUCUN THÉÂTRE ACTIF</div>
+          <button className="gc-btn" onClick={onAddTheater}>▸ OUVRIR UN THÉÂTRE</button>
+        </div>
+      )}
+
+      {/* Theater list */}
+      {theaters.length > 0 && (
+        <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
+          {theaters.map((t, i) => {
+            const todayDone = t.history.some(h => h.date === today);
+            const uc = urgencyColor(t.scenario.urgency || 3);
+            return (
+              <div
+                key={t.scenario.id}
+                onClick={() => onOpenTheater(i)}
+                style={{
+                  display:"flex", alignItems:"center", gap:0,
+                  background:"var(--surf)", border:"1px solid var(--brd)",
+                  cursor:"pointer", position:"relative", overflow:"hidden",
+                  transition:"border-color .15s, background .15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = todayDone?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
+              >
+                {/* accent bar */}
+                <div style={{ width:3, alignSelf:"stretch", background: todayDone?"#1e2e48":uc, flexShrink:0 }} />
+
+                {/* content */}
+                <div style={{ flex:1, padding:"16px 16px" }}>
+                  <div className="gc-h" style={{ fontSize:20, fontWeight:700, letterSpacing:1, marginBottom:4 }}>
+                    {t.scenario.title}
+                  </div>
+                  <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>
+                    {t.scenario.playerRole} — {t.scenario.playerCountry}
+                  </div>
+                </div>
+
+                {/* status */}
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10, padding:"16px 16px", flexShrink:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span className={`gc-dot ${todayDone?"grey":"orange"}`} />
+                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: todayDone?"#5a6a88":"#ff8800" }}>
+                      {todayDone ? "TRANSMIS" : "À DÉCIDER"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); onDropTheater(i); }}
+                    style={{ background:"transparent", border:"none", cursor:"pointer", color:"#2e3e56", fontFamily:"Share Tech Mono", fontSize:9, letterSpacing:1, padding:0, transition:"color .15s" }}
+                    onMouseEnter={e => e.currentTarget.style.color="#ff3344"}
+                    onMouseLeave={e => e.currentTarget.style.color="#2e3e56"}
+                  >✕ FERMER</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add theater */}
+      {theaters.length > 0 && (
+        theaters.length < MAX_THEATERS ? (
+          <button
+            className="gc-btn ghost full"
+            style={{ padding:"13px", letterSpacing:2, fontSize:11, borderStyle:"dashed" }}
+            onClick={onAddTheater}
+          >
+            + AJOUTER UN THÉÂTRE
+          </button>
+        ) : (
+          <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2, padding:"12px 0" }}>
+            CAPACITÉ MAXIMALE ATTEINTE ({MAX_THEATERS} THÉÂTRES)
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function ScenarioSelect({ existingIds, onSelect, onBack }) {
+  const [scenarios, setScenarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sel, setSel] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await callClaude(
+          `Tu es un système d'intelligence géopolitique. Réponds UNIQUEMENT en JSON valide, aucun texte autour.`,
+          `Recherche les crises géopolitiques actives dans le monde en ce moment. Génère exactement 6 scénarios variés.
+JSON (tableau uniquement):
+[{"id":"slug","title":"Titre","region":"Zone","type":"conflit armé|tension diplomatique|rivalité économique|crise interne","playerRole":"Rôle","playerCountry":"Pays","description":"2 phrases factuelles basées sur l'actualité réelle.","urgency":4}]
+Urgency 1-5. Varie obligatoirement régions et types.`, true
+        );
+        const p = parseJ(raw);
+        setScenarios(Array.isArray(p)&&p.length>=3 ? p : FALLBACK_SCENARIOS);
+      } catch { setScenarios(FALLBACK_SCENARIOS); }
+      setLoading(false);
+    })();
+  }, []);
+
+  const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:600, margin:"0 auto" }}>
+      <div style={{ marginBottom:22 }}>
+        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>NOUVEAU THÉÂTRE</div>
+        <h2 className="gc-h" style={{ fontSize:26, fontWeight:600, letterSpacing:2, marginTop:4 }}>CONFLITS ACTIFS</h2>
+        <div style={{ display:"flex", alignItems:"center", gap:7, marginTop:6 }}>
+          <span className="gc-dot"/>
+          <span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:2 }}>DONNÉES EN TEMPS RÉEL — {fmtDate()}</span>
+        </div>
+      </div>
+      {loading ? (
+        <TerminalLoader messages={["CONNEXION AU RÉSEAU SIGINT...", "SCAN DES ZONES DE TENSION...", "ANALYSE DES FLUX DIPLOMATIQUES...", "COMPILATION DES THÉÂTRES..."]}/>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }} className="gc-fade">
+          {scenarios.map(s => {
+            const already = existingIds.includes(s.id);
+            return (
+              <div key={s.id} className={`gc-scenario ${sel?.id===s.id?"sel":""} ${already?"disabled":""}`}
+                onClick={()=>!already&&setSel(sel?.id===s.id?null:s)}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                  <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2 }}>{s.region} — {(s.type||"").toUpperCase()}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    {already && <span className="gc-m" style={{ fontSize:9, color:"#5a6a88" }}>ACTIF</span>}
+                    <div style={{ display:"flex", gap:3 }}>
+                      {[1,2,3,4,5].map(n=>(
+                        <div key={n} style={{ width:7, height:7, background:n<=(s.urgency||3)?urgencyColor(s.urgency):"#162030" }}/>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="gc-h" style={{ fontSize:19, fontWeight:600, marginBottom:3 }}>{s.title}</div>
+                <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", marginBottom:8 }}>{s.playerRole} / {s.playerCountry}</div>
+                <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.58 }}>{s.description}</p>
+                {sel?.id===s.id && (
+                  <div style={{ marginTop:14 }}>
+                    <button className="gc-btn full" onClick={()=>onSelect(s)}>▸ PRENDRE LE COMMANDEMENT</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
+  const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
+  const [briefing, setBriefing] = useState(null);
+  const [actions, setActions] = useState(null);
+  const [actionsReady, setActionsReady] = useState(false);
+  const [selAction, setSelAction] = useState(null);
+
+  const { scenario, history } = theater;
+  const today = fmtDate();
+  const todayDone = history.some(h=>h.date===today);
+
+  useEffect(() => {
+    if (phase !== "briefing") return;
+    if (todayDone) return;
+    let alive = true;
+    (async () => {
+      let brief = null;
+      try {
+        const hctx = history.length
+          ? `Décisions précédentes: ${history.slice(-3).map(h=>h.actionLabel).join("; ")}.`
+          : "Première session.";
+        const raw = await callClaude(
+          `Tu es un système de briefing d'intelligence classifié. Réponds UNIQUEMENT en JSON valide.`,
+          `Recherche l'actualité récente: "${scenario.title}" (${scenario.playerCountry}). ${hctx}
+JSON: {"classification":"TRÈS SECRET","situation":"2 phrases factuelles.","keyDevelopments":["Dev 1","Dev 2","Dev 3"],"assessment":"Analyse en 2 phrases.","threatLevel":"ÉLEVÉ","coords":"48°52'N, 2°21'E"}`, true
+        );
+        brief = parseJ(raw) || FB_BRIEFING(scenario);
+      } catch { brief = FB_BRIEFING(scenario); }
+      if (!alive) return;
+      setBriefing(brief);
+
+      let acts = null;
+      try {
+        const raw2 = await callClaude(
+          `Tu es conseiller stratégique senior. Réponds UNIQUEMENT en JSON valide.`,
+          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole} / ${scenario.playerCountry}.
+Situation: ${brief.situation}
+4 options stratégiques distinctes. JSON:
+[{"id":"a1","label":"Nom","cat":"militaire","catColor":"#ff3344","desc":"1-2 phrases.","risk":"faible","outcome":"1 phrase."}]
+Catégories: militaire=#ff3344, diplomatique=#00e87a, économique=#c8a84b, renseignement=#4d8eff. Risques: faible/modéré/élevé.`
+        );
+        acts = parseJ(raw2);
+        if (!Array.isArray(acts)||acts.length<2) acts = FB_ACTIONS;
+      } catch { acts = FB_ACTIONS; }
+      if (!alive) return;
+      setActions(acts);
+      setActionsReady(true);
+    })();
+    return () => { alive = false; };
+  }, [phase]);
+
+  const handleConfirm = () => {
+    if (!selAction) return;
+    onDecisionMade(theaterIndex, selAction, null);
+    setPhase("confirmed");
+    (async () => {
+      try {
+        const raw = await callClaude(
+          `Tu es un système de simulation géopolitique. Réponds UNIQUEMENT en JSON valide.`,
+          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole}.
+Action: ${selAction.label} — ${selAction.desc||""}
+Résultat projeté: ${selAction.outcome}
+JSON: {"headline":"Titre accrocheur","narrative":"2-3 phrases réalistes.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}]}`
+        );
+        const parsed = parseJ(raw);
+        if (parsed) onDecisionMade(theaterIndex, selAction, parsed);
+      } catch {}
+    })();
+  };
+
+  const riskClass = r => r==="faible"?"lo":r==="modéré"?"md":"hi";
+  const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+
+  // ── IDLE : résumé du théâtre, pas de chargement ──
+  if (phase === "idle" && !todayDone) {
+    const last = history[history.length - 1];
+    return (
+      <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+        <button className="gc-btn ghost" style={{ marginBottom:20 }} onClick={onBack}>← COMMANDEMENT</button>
+
+        {/* Header théâtre */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <span className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2 }}>
+              {scenario.region} — {(scenario.type||"").toUpperCase()}
+            </span>
+            <div style={{ display:"flex", gap:3 }}>
+              {[1,2,3,4,5].map(n=>(
+                <div key={n} style={{ width:8, height:8, background:n<=(scenario.urgency||3)?urgencyColor(scenario.urgency):"#162030" }}/>
+              ))}
+            </div>
+          </div>
+          <h2 className="gc-h" style={{ fontSize:28, fontWeight:700, letterSpacing:2, marginBottom:4 }}>{scenario.title}</h2>
+          <div className="gc-m" style={{ fontSize:12, color:"#c8a84b" }}>{scenario.playerRole} — {scenario.playerCountry}</div>
+        </div>
+
+        {/* Consequence du jour précédent */}
+        {theater.consequence && (
+          <div style={{ marginBottom:20 }}>
+            <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS DE VOTRE DERNIÈRE DÉCISION</div>
+            <div className="gc-consequence">
+              <div className="gc-h" style={{ fontSize:16, fontWeight:600, marginBottom:6 }}>{theater.consequence.headline}</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.65 }}>{theater.consequence.narrative}</p>
+              {theater.consequence.metrics?.length > 0 && (
+                <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
+                  {theater.consequence.metrics.map((m,i) => (
+                    <span key={i} className="gc-m" style={{ fontSize:10, padding:"3px 8px", border:`1px solid ${m.positive?"#00e87a":"#ff3344"}`, color:m.positive?"#00e87a":"#ff3344" }}>
+                      {m.label}: {m.change}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Dernière décision si pas de conséquence encore */}
+        {!theater.consequence && last && (
+          <div style={{ marginBottom:20 }}>
+            <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginBottom:8 }}>◈ DERNIÈRE DÉCISION</div>
+            <div style={{ borderLeft:"2px solid #1e2e48", paddingLeft:14 }}>
+              <div style={{ fontSize:13, color:"#dce4f0", marginBottom:3 }}>{last.actionLabel}</div>
+              <div className="gc-m" style={{ fontSize:10, color:"#2e3e56" }}>Transmis le {last.date}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="gc-div"/>
+
+        {/* CTA principal */}
+        <button className="gc-btn full" onClick={() => setPhase("briefing")}>
+          ▸ LANCER LE BRIEFING DU JOUR
+        </button>
+        <div className="gc-m" style={{ fontSize:9, color:"#2e3e56", textAlign:"center", marginTop:10, letterSpacing:1.5 }}>
+          J+{history.length + 1} — {today}
+        </div>
+      </div>
+    );
+  }
+
+  // Already played today
+  if (todayDone) {
+    const last = history[history.length-1];
+    return (
+      <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+        <button className="gc-btn ghost" style={{ marginBottom:20 }} onClick={onBack}>← COMMANDEMENT</button>
+        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+          <span className="gc-badge ts">TRÈS SECRET</span>
+          <span className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{today}</span>
+        </div>
+        <div className="gc-h" style={{ fontSize:22, fontWeight:600, letterSpacing:2, marginTop:10, marginBottom:3 }}>{scenario.title}</div>
+        <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", marginBottom:22 }}>{scenario.playerRole} — {scenario.playerCountry}</div>
+        <div className="gc-panel" style={{ padding:20, marginBottom:16 }}>
+          <div className="gc-m" style={{ fontSize:11, color:"#00e87a", marginBottom:8 }}>✓ ORDRE DU JOUR TRANSMIS</div>
+          <div style={{ fontSize:14, color:"#dce4f0", marginBottom:4 }}>{last?.actionLabel}</div>
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>Transmis le {last?.date}</div>
+        </div>
+        {theater.consequence && (
+          <div>
+            <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS SUR LE TERRAIN</div>
+            <div className="gc-consequence">
+              <div className="gc-h" style={{ fontSize:17, fontWeight:600, marginBottom:6 }}>{theater.consequence.headline}</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{theater.consequence.narrative}</p>
+              {theater.consequence.metrics?.length>0 && (
+                <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                  {theater.consequence.metrics.map((m,i) => (
+                    <span key={i} className="gc-m" style={{ fontSize:10, padding:"3px 8px", border:`1px solid ${m.positive?"#00e87a":"#ff3344"}`, color:m.positive?"#00e87a":"#ff3344" }}>
+                      {m.label}: {m.change}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="gc-div"/>
+        <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>REVENEZ DEMAIN POUR LE PROCHAIN BRIEFING</div>
+      </div>
+    );
+  }
+
+  // Confirmed
+  if (phase === "confirmed") {
+    return (
+      <div style={{ minHeight:"80vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 20px" }}>
+        <div style={{ maxWidth:480, width:"100%", textAlign:"center" }} className="gc-fade">
+          <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>{scenario.title}</div>
+          <div className="gc-m" style={{ fontSize:11, color:"#00e87a", letterSpacing:4, marginBottom:14 }}>✓ ORDRE TRANSMIS</div>
+          <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:2, marginBottom:10 }}>{selAction?.label}</h2>
+          <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.72, marginBottom:24 }}>Vos directives ont été transmises.<br/>Revenez demain pour en observer les effets.</p>
+          <div className="gc-panel" style={{ padding:18, marginBottom:22, textAlign:"left" }}>
+            <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>◈ RÉSULTAT ATTENDU</div>
+            <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{selAction?.outcome}</p>
+          </div>
+          <button className="gc-btn full" onClick={onBack}>▸ RETOUR AU COMMANDEMENT</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Briefing
+  if (phase === "briefing") {
+    return (
+      <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }}>
+        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← COMMANDEMENT</button>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span className="gc-badge ts">{briefing?.classification||"TRÈS SECRET"}</span>
+          <span className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{today} — J+{Math.max(1,history.length)}</span>
+        </div>
+        <h2 className="gc-h" style={{ fontSize:22, fontWeight:600, letterSpacing:2, marginTop:10 }}>BRIEFING QUOTIDIEN</h2>
+        <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", marginBottom:20 }}>{scenario.playerRole} — {scenario.playerCountry}</div>
+        {!briefing ? (
+          <TerminalLoader messages={["CONNEXION RÉSEAU SIGINT...", "DÉCRYPTAGE DES FLUX...", "COMPILATION DES RAPPORTS...", "GÉNÉRATION DU BRIEFING..."]}/>
+        ) : (
+          <div className="gc-fade">
+            <div className="gc-panel" style={{ padding:20, marginBottom:14 }}>
+              <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:10 }}>◈ SITUATION ACTUELLE</div>
+              <p style={{ fontSize:14, lineHeight:1.78, color:"#dce4f0" }}>{briefing.situation}</p>
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2.5, marginBottom:10 }}>◈ DÉVELOPPEMENTS CLÉS</div>
+              {(briefing.keyDevelopments||[]).map((d,i,arr) => (
+                <div key={i} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:i<arr.length-1?"1px solid #162030":"none" }}>
+                  <span className="gc-m" style={{ color:"#c8a84b", fontSize:11, flexShrink:0 }}>{String(i+1).padStart(2,"0")}</span>
+                  <span style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.62 }}>{d}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ borderLeft:"3px solid #c8a84b", paddingLeft:16, marginBottom:20 }}>
+              <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ APPRÉCIATION DU RENSEIGNEMENT</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{briefing.assessment}</p>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+              <div>
+                <span className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>MENACE : </span>
+                <span className="gc-m" style={{ fontSize:10, color:"#ff3344", letterSpacing:2 }}>{briefing.threatLevel||"ÉLEVÉ"}</span>
+              </div>
+              <span className="gc-m" style={{ fontSize:10, color:"#2e3e56" }}>{briefing.coords}</span>
+            </div>
+            {!actionsReady ? (
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0" }}>
+                <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>GÉNÉRATION DES OPTIONS D'ACTION...</span>
+              </div>
+            ) : (
+              <button className="gc-btn full" onClick={()=>setPhase("actions")}>▸ CHOISIR UNE ACTION</button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Actions
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+      <div style={{ marginBottom:22 }}>
+        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={()=>setPhase("briefing")}>← BRIEFING</button>
+        <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:4 }}>{scenario.title}</div>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>DÉCISION DU JOUR</div>
+        <h2 className="gc-h" style={{ fontSize:24, fontWeight:600, letterSpacing:2, marginTop:4 }}>CHOISISSEZ VOTRE ACTION</h2>
+        <p style={{ fontSize:13, color:"#5a6a88", marginTop:6, lineHeight:1.62 }}>Votre décision produira des effets demain.</p>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:9, marginBottom:24 }}>
+        {(actions||FB_ACTIONS).map(a => (
+          <div key={a.id} className={`gc-action ${selAction?.id===a.id?"sel":""}`} onClick={()=>setSelAction(selAction?.id===a.id?null:a)}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span className="gc-cat" style={{ color:a.catColor||"#c8a84b", borderColor:a.catColor||"#c8a84b" }}>{(a.cat||"").toUpperCase()}</span>
+              <span className={`gc-risk ${riskClass(a.risk)}`}>RISQUE {(a.risk||"").toUpperCase()}</span>
+            </div>
+            <div className="gc-h" style={{ fontSize:17, fontWeight:600, marginBottom:6 }}>{a.label}</div>
+            <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.58, marginBottom:8 }}>{a.desc}</p>
+            <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>RÉSULTAT PROJETÉ : <span style={{color:"#c8a84b"}}>{a.outcome}</span></div>
+          </div>
+        ))}
+      </div>
+      <button className="gc-btn full" disabled={!selAction} onClick={handleConfirm}>▸ TRANSMETTRE L'ORDRE</button>
+      <div className="gc-m" style={{ fontSize:9, color:"#1e2e48", textAlign:"center", marginTop:10, letterSpacing:1.5 }}>DÉCISION DÉFINITIVE — IRRÉVERSIBLE</div>
+    </div>
+  );
+}
+
+function ProfileScreen({ player, theaters, onBack, onReset }) {
+  const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
+  const nbT      = theaters.length; // toujours lu depuis les props live
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+      <div style={{ marginBottom:24 }}>
+        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>DOSSIER OPÉRATEUR</div>
+        <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h2>
+        <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", marginTop:3 }}>{player.email}</div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
+        {[
+          { l:"DÉCISIONS TOTALES", v: total },
+          { l:"THÉÂTRES SUIVIS",   v: nbT  },
+          { l:"ACCRÉDITATION",     v:"NV.5" },
+          { l:"DATE",              v: fmtDate() },
+        ].map((s, i) => (
+          <div key={i} className="gc-panel" style={{ padding:16 }}>
+            <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:1.5, marginBottom:6 }}>{s.l}</div>
+            <div className="gc-h" style={{ fontSize:24, color:"#c8a84b", fontWeight:700 }}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Liste explicite de tous les théâtres */}
+      {nbT === 0 ? (
+        <p style={{ fontSize:13, color:"#5a6a88" }}>Aucun théâtre actif.</p>
+      ) : (
+        theaters.map((t, ti) => (
+          <div key={`${t.scenario.id}-${ti}`} style={{ marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2 }}>
+                ◈ {t.scenario.title.toUpperCase()}
+              </div>
+              <div className="gc-m" style={{ fontSize:9, color:"#5a6a88" }}>
+                {t.history.length} DÉCISION{t.history.length !== 1 ? "S" : ""}
+              </div>
+            </div>
+            {t.history.length === 0 ? (
+              <p style={{ fontSize:12, color:"#2e3e56", paddingLeft:12 }}>Aucune décision enregistrée.</p>
+            ) : (
+              [...t.history].reverse().slice(0, 5).map((e, i) => (
+                <div key={i} style={{ display:"flex", gap:14, padding:"9px 0 9px 12px", borderBottom:"1px solid #162030" }}>
+                  <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", flexShrink:0 }}>{e.date}</div>
+                  <div style={{ fontSize:12, color:"#8a9ab8" }}>{e.actionLabel}</div>
+                </div>
+              ))
+            )}
+          </div>
+        ))
+      )}
+      <div className="gc-div"/>
+      {!confirming ? (
+        <button className="gc-btn danger" onClick={() => setConfirming(true)}>
+          RÉINITIALISER LE DOSSIER
+        </button>
+      ) : (
+        <div style={{ background:"rgba(255,51,68,0.06)", border:"1px solid rgba(255,51,68,0.3)", padding:"16px 18px" }}>
+          <div className="gc-m" style={{ fontSize:11, color:"#ff3344", letterSpacing:1.5, marginBottom:12 }}>
+            CONFIRMER LA SUPPRESSION DÉFINITIVE ?
+          </div>
+          <p style={{ fontSize:12, color:"#5a6a88", marginBottom:16, lineHeight:1.6 }}>
+            Toutes vos décisions, théâtres et données seront effacés. Cette action est irréversible.
+          </p>
+          <div style={{ display:"flex", gap:10 }}>
+            <button className="gc-btn danger" style={{ flex:1, justifyContent:"center" }} onClick={onReset}>
+              ✕ CONFIRMER
+            </button>
+            <button className="gc-btn ghost" style={{ flex:1, justifyContent:"center" }} onClick={() => setConfirming(false)}>
+              ANNULER
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// ROOT
+// ═══════════════════════════════════════════════
+export default function GeoCommand() {
+  useEffect(() => injectStyles(), []);
+  const [screen, setScreen]   = useState("init");
+  const [player, setPlayer]   = useState(null);
+  const [theaters, setTheaters] = useState([]);
+  const [activeIdx, setActiveIdx] = useState(null);
+
+  // Persist helper — full replace of player data
+  const persistP = (email, updates) => {
+    try {
+      const existing = ldP(email);
+      svP(email, { ...existing, ...updates });
+    } catch {}
+  };
+
+  // Bootstrap: restore last session from per-player storage
+  useEffect(() => {
+    try {
+      const meta = ldMeta();
+      if (meta.email) {
+        const d = ldP(meta.email);
+        if (d.player) {
+          setPlayer(d.player);
+          setTheaters(d.theaters || []);
+          setScreen("hub");
+          return;
+        }
+      }
+    } catch {}
+    setScreen("login");
+  }, []);
+
+  // Login: restore existing player data, never overwrite
+  const handleLogin = (p) => {
+    let restoredTheaters = [];
+    try { restoredTheaters = ldP(p.email).theaters || []; } catch {}
+    setPlayer(p);
+    setTheaters(restoredTheaters);
+    try { persistP(p.email, { player: p, theaters: restoredTheaters }); } catch {}
+    try { svMeta({ email: p.email }); } catch {}
+    setScreen("hub");
+  };
+
+  const handleAddScenario = (scenario) => {
+    const newT = { scenario, history: [], consequence: null };
+    const updated = [...theaters, newT];
+    setTheaters(updated);
+    persistP(player.email, { theaters: updated });
+    setActiveIdx(updated.length - 1);
+    setScreen("theater");
+  };
+
+  const handleOpenTheater = (i) => { setActiveIdx(i); setScreen("theater"); };
+
+  const handleDropTheater = (i) => {
+    const updated = theaters.filter((_, idx) => idx !== i);
+    setTheaters(updated);
+    persistP(player.email, { theaters: updated });
+  };
+
+  const handleDecisionMade = (index, action, consequence) => {
+    setTheaters(prev => {
+      const updated = prev.map((t, i) => {
+        if (i !== index) return t;
+        const today = fmtDate();
+        const alreadyLogged = t.history.some(h => h.date === today);
+        const newHistory = alreadyLogged
+          ? t.history
+          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id }];
+        return { ...t, history: newHistory, consequence: consequence !== null ? consequence : t.consequence };
+      });
+      persistP(player.email, { theaters: updated });
+      return updated;
+    });
+  };
+
+  const handleReset = () => {
+    // Toujours réinitialiser l'état React en premier
+    setPlayer(null);
+    setTheaters([]);
+    setActiveIdx(null);
+    setScreen("login");
+    // Nettoyage storage best-effort
+    try { if (player) localStorage.removeItem(`${KEY}:${player.email}`); } catch {}
+    try { svMeta({}); } catch {}
+  };
+
+  return (
+    <div className="gc">
+      <div className="gc-grid"/>
+      <div className="gc-z">
+        {screen!=="login"&&screen!=="init"&&(
+          <Header player={player} theaters={theaters} onProfile={()=>setScreen("profile")}/>
+        )}
+        {screen==="init"&&(
+          <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <TerminalLoader messages={["INITIALISATION DU SYSTÈME..."]}/>
+          </div>
+        )}
+        {screen==="login"&&<LoginScreen onLogin={handleLogin}/>}
+        {screen==="hub"&&(
+          <HubScreen player={player} theaters={theaters}
+            onOpenTheater={handleOpenTheater}
+            onAddTheater={()=>setScreen("scenario-select")}
+            onDropTheater={handleDropTheater}/>
+        )}
+        {screen==="scenario-select"&&(
+          <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
+        )}
+        {screen==="theater"&&activeIdx!==null&&theaters[activeIdx]&&(
+          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")}/>
+        )}
+        {screen==="profile"&&(
+          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset}/>
+        )}
+      </div>
+    </div>
+  );
+}

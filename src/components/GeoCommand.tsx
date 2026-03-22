@@ -472,15 +472,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
       let acts = null;
       try {
-        const raw2 = await callClaude(
-          `Tu es conseiller stratégique senior. Réponds UNIQUEMENT en JSON valide.`,
-          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole} / ${scenario.playerCountry}.
-Situation: ${brief.situation}
-4 options stratégiques distinctes. JSON:
-[{"id":"a1","label":"Nom","cat":"militaire","catColor":"#ff3344","desc":"1-2 phrases.","risk":"faible","outcome":"1 phrase."}]
-Catégories: militaire=#ff3344, diplomatique=#00e87a, économique=#c8a84b, renseignement=#4d8eff. Risques: faible/modéré/élevé.`
-        );
-        acts = parseJ(raw2);
+        acts = await callAI("actions", { scenario, briefing: brief });
         if (!Array.isArray(acts)||acts.length<2) acts = FB_ACTIONS;
       } catch { acts = FB_ACTIONS; }
       if (!alive) return;

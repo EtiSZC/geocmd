@@ -132,16 +132,62 @@ function parseJ(raw) {
   } catch { return null; }
 }
 
-const KEY      = "geocmd_v2";
-const META_KEY = "geocmd_meta"; // stores last logged-in email
+// ---- Supabase persistence helpers ----
 
-// Per-player storage (keyed by email)
-const ldP  = (email) => { try { return JSON.parse(localStorage.getItem(`${KEY}:${email}`) || "{}"); } catch { return {}; } };
-const svP  = (email, d) => localStorage.setItem(`${KEY}:${email}`, JSON.stringify(d));
+async function loadPlayerByEmail(email: string) {
+  const { data } = await supabase.from("players").select("*").eq("email", email).maybeSingle();
+  return data;
+}
 
-// Meta (last session)
+async function upsertPlayer(email: string, callsign: string) {
+  const { data } = await supabase
+    .from("players")
+    .upsert({ email, callsign }, { onConflict: "email" })
+    .select()
+    .single();
+  return data;
+}
+
+async function loadTheaters(playerId: string) {
+  const { data } = await supabase
+    .from("theaters")
+    .select("*")
+    .eq("player_id", playerId)
+    .order("created_at", { ascending: true });
+  return (data || []).map(t => ({
+    dbId: t.id,
+    scenario: t.scenario as any,
+    history: (t.history as any) || [],
+    consequence: t.consequence,
+  }));
+}
+
+async function insertTheater(playerId: string, scenario: any) {
+  const { data } = await supabase
+    .from("theaters")
+    .insert({ player_id: playerId, scenario, history: [] })
+    .select()
+    .single();
+  return data;
+}
+
+async function updateTheater(theaterId: string, updates: { history?: any; consequence?: string | null }) {
+  await supabase.from("theaters").update(updates).eq("id", theaterId);
+}
+
+async function deleteTheater(theaterId: string) {
+  await supabase.from("theaters").delete().eq("id", theaterId);
+}
+
+async function deletePlayerAndTheaters(playerId: string) {
+  await supabase.from("theaters").delete().eq("player_id", playerId);
+  await supabase.from("players").delete().eq("id", playerId);
+}
+
+// Meta (last session) — keep in localStorage for auto-login convenience
+const META_KEY = "geocmd_meta";
 const ldMeta = () => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
-const svMeta = (d) => localStorage.setItem(META_KEY, JSON.stringify(d));
+const svMeta = (d: any) => localStorage.setItem(META_KEY, JSON.stringify(d));
 
 const fmtDate = () => new Date().toLocaleDateString("fr-FR");
 const MAX_THEATERS = 4;

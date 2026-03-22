@@ -110,19 +110,13 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-async function callClaude(system, user, webSearch = false) {
-  const body: any = { model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages:[{ role:"user", content:user }] };
-  if (webSearch) body.tools = [{ type:"web_search_20250305", name:"web_search" }];
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
+async function callAI(type: string, params: Record<string, any> = {}) {
+  const { data, error } = await supabase.functions.invoke("geocmd-ai", {
+    body: { type, ...params },
   });
-  const d = await r.json();
-  const raw = (d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
-  // Strip <cite ...>...</cite> keeping inner text, then any residual bare tags
-  return raw
-    .replace(/<cite[^>]*>([\s\S]*?)<\/cite>/g, "$1")
-    .replace(/<\/?cite[^>]*>/g, "")
-    .trim();
+  if (error) throw error;
+  if (!data?.success) throw new Error(data?.error || "AI error");
+  return data.data;
 }
 
 function parseJ(raw) {
@@ -392,14 +386,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await callClaude(
-          `Tu es un système d'intelligence géopolitique. Réponds UNIQUEMENT en JSON valide, aucun texte autour.`,
-          `Recherche les crises géopolitiques actives dans le monde en ce moment. Génère exactement 6 scénarios variés.
-JSON (tableau uniquement):
-[{"id":"slug","title":"Titre","region":"Zone","type":"conflit armé|tension diplomatique|rivalité économique|crise interne","playerRole":"Rôle","playerCountry":"Pays","description":"2 phrases factuelles basées sur l'actualité réelle.","urgency":4}]
-Urgency 1-5. Varie obligatoirement régions et types.`, true
-        );
-        const p = parseJ(raw);
+        const p = await callAI("scenarios");
         setScenarios(Array.isArray(p)&&p.length>=3 ? p : FALLBACK_SCENARIOS);
       } catch { setScenarios(FALLBACK_SCENARIOS); }
       setLoading(false);
@@ -475,29 +462,17 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
       let brief = null;
       try {
         const hctx = history.length
-          ? `Décisions précédentes: ${history.slice(-3).map(h=>h.actionLabel).join("; ")}.`
-          : "Première session.";
-        const raw = await callClaude(
-          `Tu es un système de briefing d'intelligence classifié. Réponds UNIQUEMENT en JSON valide.`,
-          `Recherche l'actualité récente: "${scenario.title}" (${scenario.playerCountry}). ${hctx}
-JSON: {"classification":"TRÈS SECRET","situation":"2 phrases factuelles.","keyDevelopments":["Dev 1","Dev 2","Dev 3"],"assessment":"Analyse en 2 phrases.","threatLevel":"ÉLEVÉ","coords":"48°52'N, 2°21'E"}`, true
-        );
-        brief = parseJ(raw) || FB_BRIEFING(scenario);
+          ? history.slice(-3).map(h=>h.actionLabel)
+          : [];
+        brief = await callAI("briefing", { scenario, history: history.slice(-3) });
+        if (!brief || !brief.situation) brief = FB_BRIEFING(scenario);
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
       setBriefing(brief);
 
       let acts = null;
       try {
-        const raw2 = await callClaude(
-          `Tu es conseiller stratégique senior. Réponds UNIQUEMENT en JSON valide.`,
-          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole} / ${scenario.playerCountry}.
-Situation: ${brief.situation}
-4 options stratégiques distinctes. JSON:
-[{"id":"a1","label":"Nom","cat":"militaire","catColor":"#ff3344","desc":"1-2 phrases.","risk":"faible","outcome":"1 phrase."}]
-Catégories: militaire=#ff3344, diplomatique=#00e87a, économique=#c8a84b, renseignement=#4d8eff. Risques: faible/modéré/élevé.`
-        );
-        acts = parseJ(raw2);
+        acts = await callAI("actions", { scenario, briefing: brief });
         if (!Array.isArray(acts)||acts.length<2) acts = FB_ACTIONS;
       } catch { acts = FB_ACTIONS; }
       if (!alive) return;
@@ -513,14 +488,7 @@ Catégories: militaire=#ff3344, diplomatique=#00e87a, économique=#c8a84b, rense
     setPhase("confirmed");
     (async () => {
       try {
-        const raw = await callClaude(
-          `Tu es un système de simulation géopolitique. Réponds UNIQUEMENT en JSON valide.`,
-          `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole}.
-Action: ${selAction.label} — ${selAction.desc||""}
-Résultat projeté: ${selAction.outcome}
-JSON: {"headline":"Titre accrocheur","narrative":"2-3 phrases réalistes.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}]}`
-        );
-        const parsed = parseJ(raw);
+        const parsed = await callAI("consequence", { scenario, action: selAction });
         if (parsed) onDecisionMade(theaterIndex, selAction, parsed);
       } catch {}
     })();

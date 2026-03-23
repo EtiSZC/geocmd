@@ -487,14 +487,9 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   const handleConfirm = () => {
     if (!selAction) return;
+    // Store decision with timestamp — consequence will be generated after 5h
     onDecisionMade(theaterIndex, selAction, null);
     setPhase("confirmed");
-    (async () => {
-      try {
-        const parsed = await callAI("consequence", { scenario, action: selAction });
-        if (parsed) onDecisionMade(theaterIndex, selAction, parsed);
-      } catch {}
-    })();
   };
 
   const riskClass = r => r==="faible"?"lo":r==="modéré"?"md":"hi";

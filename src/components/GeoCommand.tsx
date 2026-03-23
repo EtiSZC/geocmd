@@ -487,18 +487,55 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   const handleConfirm = () => {
     if (!selAction) return;
+    // Store decision with timestamp — consequence will be generated after 5h
     onDecisionMade(theaterIndex, selAction, null);
     setPhase("confirmed");
-    (async () => {
-      try {
-        const parsed = await callAI("consequence", { scenario, action: selAction });
-        if (parsed) onDecisionMade(theaterIndex, selAction, parsed);
-      } catch {}
-    })();
   };
 
   const riskClass = r => r==="faible"?"lo":r==="modéré"?"md":"hi";
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+
+  // 5-hour delay logic for consequences
+  const DELAY_MS = 5 * 60 * 60 * 1000; // 5 hours
+  const lastEntry = history[history.length - 1];
+  const decidedAt = lastEntry?.decided_at ? new Date(lastEntry.decided_at).getTime() : 0;
+  const elapsed = decidedAt ? Date.now() - decidedAt : Infinity;
+  const consequenceReady = elapsed >= DELAY_MS;
+  const [countdown, setCountdown] = useState("");
+  const [generatingConsequence, setGeneratingConsequence] = useState(false);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!lastEntry?.decided_at || theater.consequence || consequenceReady) return;
+    const tick = () => {
+      const remaining = DELAY_MS - (Date.now() - decidedAt);
+      if (remaining <= 0) { setCountdown(""); return; }
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      setCountdown(`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`);
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [lastEntry?.decided_at, theater.consequence, consequenceReady, decidedAt]);
+
+  // Auto-generate consequence when 5h elapsed
+  useEffect(() => {
+    if (!lastEntry?.decided_at || !consequenceReady || theater.consequence || generatingConsequence) return;
+    if (phase !== "idle") return;
+    let alive = true;
+    setGeneratingConsequence(true);
+    (async () => {
+      try {
+        const action = { id: lastEntry.actionId, label: lastEntry.actionLabel, outcome: "" };
+        const parsed = await callAI("consequence", { scenario, action });
+        if (parsed && alive) onDecisionMade(theaterIndex, action, parsed);
+      } catch {}
+      if (alive) setGeneratingConsequence(false);
+    })();
+    return () => { alive = false; };
+  }, [phase, consequenceReady, theater.consequence, generatingConsequence]);
 
   // ── IDLE : résumé du théâtre, pas de chargement ──
   if (phase === "idle" && !todayDone) {
@@ -523,7 +560,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
           <div className="gc-m" style={{ fontSize:12, color:"#c8a84b" }}>{scenario.playerRole} — {scenario.playerCountry}</div>
         </div>
 
-        {/* Consequence du jour précédent */}
+        {/* Consequence du jour précédent (only shown once ready) */}
         {theater.consequence && (
           <div style={{ marginBottom:20 }}>
             <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS DE VOTRE DERNIÈRE DÉCISION</div>
@@ -543,8 +580,34 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
           </div>
         )}
 
-        {/* Dernière décision si pas de conséquence encore */}
-        {!theater.consequence && last && (
+        {/* Pending consequence — waiting for 5h delay */}
+        {!theater.consequence && last?.decided_at && !consequenceReady && (
+          <div style={{ marginBottom:20 }}>
+            <div className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:2.5, marginBottom:8 }}>◈ ORDRE EN COURS D'EXÉCUTION</div>
+            <div className="gc-panel" style={{ padding:18 }}>
+              <div style={{ fontSize:14, color:"#dce4f0", marginBottom:8 }}>{last.actionLabel}</div>
+              <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginBottom:12 }}>Transmis le {last.date}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <span className="gc-dot"/>
+                <div>
+                  <div className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:2 }}>DÉPLOIEMENT EN COURS</div>
+                  <div className="gc-h" style={{ fontSize:28, fontWeight:700, color:"#c8a84b", marginTop:4, letterSpacing:3 }}>{countdown}</div>
+                  <div className="gc-m" style={{ fontSize:9, color:"#2e3e56", marginTop:4, letterSpacing:1.5 }}>EFFETS SUR LE TERRAIN DANS {countdown}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generating consequence */}
+        {!theater.consequence && last?.decided_at && consequenceReady && generatingConsequence && (
+          <div style={{ marginBottom:20 }}>
+            <TerminalLoader messages={["ANALYSE DES EFFETS SUR LE TERRAIN...", "COMPILATION DES RAPPORTS DE SITUATION...", "ÉVALUATION DES CONSÉQUENCES..."]}/>
+          </div>
+        )}
+
+        {/* Dernière décision si pas de conséquence et pas de decided_at (legacy) */}
+        {!theater.consequence && last && !last.decided_at && (
           <div style={{ marginBottom:20 }}>
             <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginBottom:8 }}>◈ DERNIÈRE DÉCISION</div>
             <div style={{ borderLeft:"2px solid #1e2e48", paddingLeft:14 }}>
@@ -556,13 +619,21 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
         <div className="gc-div"/>
 
-        {/* CTA principal */}
-        <button className="gc-btn full" onClick={() => setPhase("briefing")}>
-          ▸ LANCER LE BRIEFING DU JOUR
-        </button>
-        <div className="gc-m" style={{ fontSize:9, color:"#2e3e56", textAlign:"center", marginTop:10, letterSpacing:1.5 }}>
-          J+{history.length + 1} — {today}
-        </div>
+        {/* CTA principal — disabled while waiting for consequence */}
+        {(!last?.decided_at || theater.consequence || consequenceReady) ? (
+          <>
+            <button className="gc-btn full" onClick={() => setPhase("briefing")}>
+              ▸ LANCER LE BRIEFING DU JOUR
+            </button>
+            <div className="gc-m" style={{ fontSize:9, color:"#2e3e56", textAlign:"center", marginTop:10, letterSpacing:1.5 }}>
+              J+{history.length + 1} — {today}
+            </div>
+          </>
+        ) : (
+          <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>
+            ATTENDEZ LA RÉSOLUTION DE VOTRE ORDRE POUR LANCER UN NOUVEAU BRIEFING
+          </div>
+        )}
       </div>
     );
   }
@@ -616,7 +687,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
           <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>{scenario.title}</div>
           <div className="gc-m" style={{ fontSize:11, color:"#00e87a", letterSpacing:4, marginBottom:14 }}>✓ ORDRE TRANSMIS</div>
           <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:2, marginBottom:10 }}>{selAction?.label}</h2>
-          <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.72, marginBottom:24 }}>Vos directives ont été transmises.<br/>Revenez demain pour en observer les effets.</p>
+          <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.72, marginBottom:24 }}>Vos directives ont été transmises.<br/>Les effets sur le terrain seront visibles dans 5 heures.</p>
           <div className="gc-panel" style={{ padding:18, marginBottom:22, textAlign:"left" }}>
             <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>◈ RÉSULTAT ATTENDU</div>
             <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{selAction?.outcome}</p>
@@ -858,7 +929,7 @@ export default function GeoCommand() {
         const alreadyLogged = t.history.some((h: any) => h.date === today);
         const newHistory = alreadyLogged
           ? t.history
-          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id }];
+          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
         const newConsequence = consequence !== null ? consequence : t.consequence;
         // Persist to DB
         if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: newConsequence });

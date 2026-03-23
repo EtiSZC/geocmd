@@ -152,7 +152,7 @@ async function loadTheaters(playerId: string) {
     dbId: t.id,
     scenario: t.scenario as any,
     history: (t.history as any) || [],
-    consequence: t.consequence,
+    consequence: t.consequence as any,
   }));
 }
 

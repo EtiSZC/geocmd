@@ -794,7 +794,8 @@ function ProfileScreen({ player, theaters, onBack, onReset }) {
 // ═══════════════════════════════════════════════
 export default function GeoCommand() {
   useEffect(() => injectStyles(), []);
-  const [screen, setScreen]   = useState("init");
+  const [screen, setScreen_]   = useState("init");
+  const setScreen = useCallback((s: string) => { window.scrollTo(0, 0); setScreen_(s); }, []);
   const [player, setPlayer]   = useState<any>(null);
   const [theaters, setTheaters] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState<number|null>(null);

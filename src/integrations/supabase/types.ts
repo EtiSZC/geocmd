@@ -40,7 +40,7 @@ export type Database = {
       }
       theaters: {
         Row: {
-          consequence: string | null
+          consequence: Json | null
           created_at: string
           history: Json
           id: string
@@ -49,7 +49,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          consequence?: string | null
+          consequence?: Json | null
           created_at?: string
           history?: Json
           id?: string
@@ -58,7 +58,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          consequence?: string | null
+          consequence?: Json | null
           created_at?: string
           history?: Json
           id?: string

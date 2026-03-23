@@ -853,7 +853,7 @@ export default function GeoCommand() {
         const alreadyLogged = t.history.some((h: any) => h.date === today);
         const newHistory = alreadyLogged
           ? t.history
-          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id }];
+          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
         const newConsequence = consequence !== null ? consequence : t.consequence;
         // Persist to DB
         if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: newConsequence });

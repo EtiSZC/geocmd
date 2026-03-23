@@ -450,6 +450,9 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   const [actionsReady, setActionsReady] = useState(false);
   const [selAction, setSelAction] = useState(null);
 
+  // Scroll to top on phase change
+  useEffect(() => { window.scrollTo(0, 0); }, [phase]);
+
   const { scenario, history } = theater;
   const today = fmtDate();
   const todayDone = history.some(h=>h.date===today);

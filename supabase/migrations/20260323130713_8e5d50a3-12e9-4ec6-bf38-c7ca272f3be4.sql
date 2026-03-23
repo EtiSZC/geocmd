@@ -1,0 +1,1 @@
+ALTER TABLE public.theaters ALTER COLUMN consequence TYPE jsonb USING consequence::jsonb;

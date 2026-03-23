@@ -687,7 +687,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
           <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>{scenario.title}</div>
           <div className="gc-m" style={{ fontSize:11, color:"#00e87a", letterSpacing:4, marginBottom:14 }}>✓ ORDRE TRANSMIS</div>
           <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:2, marginBottom:10 }}>{selAction?.label}</h2>
-          <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.72, marginBottom:24 }}>Vos directives ont été transmises.<br/>Revenez demain pour en observer les effets.</p>
+          <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.72, marginBottom:24 }}>Vos directives ont été transmises.<br/>Les effets sur le terrain seront visibles dans 5 heures.</p>
           <div className="gc-panel" style={{ padding:18, marginBottom:22, textAlign:"left" }}>
             <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>◈ RÉSULTAT ATTENDU</div>
             <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{selAction?.outcome}</p>

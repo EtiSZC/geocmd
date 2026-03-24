@@ -227,12 +227,10 @@ function TerminalLoader({ messages=[] }) {
 }
 
 function Header({ player, theaters, onProfile }) {
-  const pendingCount = theaters.filter(t => {
+  const readyCount = theaters.filter(t => {
     const last = t.history[t.history.length - 1];
-    return !(last?.decided_at && !t.consequence); // not pending = can act
-  }).length === 0 ? theaters.length : theaters.filter(t => {
-    const last = t.history[t.history.length - 1];
-    return !!(last?.decided_at && !t.consequence);
+    // Ready to act = no pending decision (either no history, or consequence received)
+    return !last?.decided_at || !!t.consequence;
   }).length;
   return (
     <header className="gc-header">

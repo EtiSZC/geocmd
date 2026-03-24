@@ -455,7 +455,11 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   const { scenario, history } = theater;
   const today = fmtDate();
-  const todayDone = history.some(h=>h.date===today);
+  // A decision is "pending" if the last history entry has decided_at but no consequence yet
+  const lastEntry_ = history[history.length - 1];
+  const hasPendingDecision = !!(lastEntry_?.decided_at && !theater.consequence);
+  // Player can start a new briefing only if there's no pending unresolved decision
+  const canStartNewBriefing = !hasPendingDecision;
 
   useEffect(() => {
     if (phase !== "briefing") return;

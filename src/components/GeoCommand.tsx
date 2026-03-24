@@ -142,6 +142,16 @@ async function upsertPlayer(email: string, callsign: string) {
   return data;
 }
 
+async function loadOtherPlayersWithTheaters(currentPlayerId: string) {
+  const { data: allPlayers } = await supabase.from("players").select("id, callsign").neq("id", currentPlayerId);
+  if (!allPlayers || allPlayers.length === 0) return [];
+  const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario").in("player_id", allPlayers.map(p => p.id));
+  return allPlayers.map(p => ({
+    callsign: p.callsign,
+    theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => (t.scenario as any)?.title || "Inconnu"),
+  }));
+}
+
 async function loadTheaters(playerId: string) {
   const { data } = await supabase
     .from("theaters")

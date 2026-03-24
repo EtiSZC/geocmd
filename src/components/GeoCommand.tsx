@@ -315,7 +315,6 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
           {theaters.map((t, i) => {
             const lastH = t.history[t.history.length - 1];
             const hasPending = !!(lastH?.decided_at && !t.consequence);
-            const todayDone = hasPending; // pending decision = "transmitted, waiting"
             const uc = urgencyColor(t.scenario.urgency || 3);
             return (
               <div

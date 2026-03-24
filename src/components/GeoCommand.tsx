@@ -346,9 +346,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                 {/* status */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10, padding:"16px 16px", flexShrink:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span className={`gc-dot ${todayDone?"grey":"orange"}`} />
-                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: todayDone?"#5a6a88":"#ff8800" }}>
-                      {todayDone ? "TRANSMIS" : "À DÉCIDER"}
+                    <span className={`gc-dot ${hasPending?"orange":"grey"}`} />
+                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: hasPending?"#ff8800":"#5a6a88" }}>
+                      {hasPending ? "EN COURS" : "DISPONIBLE"}
                     </span>
                   </div>
                   <button

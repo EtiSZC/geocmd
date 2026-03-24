@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 function injectStyles() {
@@ -209,6 +209,12 @@ const FB_ACTIONS = [
   { id:"a3", label:"Opération de renseignement HUMINT",    cat:"renseignement",  catColor:"#4d8eff", desc:"Déployer des actifs clandestins dans les cercles adverses.", risk:"élevé",  outcome:"Gain informationnel critique, risque d'incident diplomatique." },
   { id:"a4", label:"Pression économique ciblée",           cat:"économique",     catColor:"#c8a84b", desc:"Sanctions sectorielles pour asphyxier les capacités adverses.", risk:"modéré", outcome:"Affaiblissement progressif sous 30 jours." },
 ];
+
+const FB_CONSEQUENCE = (scenario, actionLabel) => ({
+  headline: `Effets observés sur ${scenario.title}`,
+  narrative: `Les premiers rapports de terrain indiquent que la décision « ${actionLabel} » produit désormais des effets mesurables. La situation reste évolutive et une consolidation du renseignement est en cours avant le prochain briefing.`,
+  metrics: [],
+});
 
 function TerminalLoader({ messages=[] }) {
   const [vis, setVis] = useState(0);
@@ -512,6 +518,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   const consequenceReady = elapsed >= DELAY_MS;
   const [countdown, setCountdown] = useState("");
   const [generatingConsequence, setGeneratingConsequence] = useState(false);
+  const generatingConsequenceRef = useRef(false);
 
   // Countdown timer
   useEffect(() => {
@@ -531,20 +538,32 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   // Auto-generate consequence when 5h elapsed
   useEffect(() => {
-    if (!lastEntry?.decided_at || !consequenceReady || theater.consequence || generatingConsequence) return;
+    if (!lastEntry?.decided_at || !consequenceReady || theater.consequence) return;
     if (phase !== "idle") return;
+    if (generatingConsequenceRef.current) return;
+
     let alive = true;
+    generatingConsequenceRef.current = true;
     setGeneratingConsequence(true);
+
     (async () => {
+      const action = { id: lastEntry.actionId, label: lastEntry.actionLabel, outcome: "" };
       try {
-        const action = { id: lastEntry.actionId, label: lastEntry.actionLabel, outcome: "" };
         const parsed = await callAI("consequence", { scenario, action });
-        if (parsed && alive) onDecisionMade(theaterIndex, action, parsed);
-      } catch {}
-      if (alive) setGeneratingConsequence(false);
+        const safeConsequence = parsed?.headline && parsed?.narrative
+          ? parsed
+          : FB_CONSEQUENCE(scenario, action.label);
+        if (alive) onDecisionMade(theaterIndex, action, safeConsequence);
+      } catch {
+        if (alive) onDecisionMade(theaterIndex, action, FB_CONSEQUENCE(scenario, action.label));
+      } finally {
+        generatingConsequenceRef.current = false;
+        if (alive) setGeneratingConsequence(false);
+      }
     })();
+
     return () => { alive = false; };
-  }, [phase, consequenceReady, theater.consequence, generatingConsequence]);
+  }, [phase, consequenceReady, theater.consequence, lastEntry?.decided_at, onDecisionMade, scenario, theaterIndex]);
 
   // ── IDLE : résumé du théâtre, pas de chargement ──
   if (phase === "idle" && canStartNewBriefing) {

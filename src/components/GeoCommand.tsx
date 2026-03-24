@@ -142,6 +142,16 @@ async function upsertPlayer(email: string, callsign: string) {
   return data;
 }
 
+async function loadOtherPlayersWithTheaters(currentPlayerId: string) {
+  const { data: allPlayers } = await supabase.from("players").select("id, callsign").neq("id", currentPlayerId);
+  if (!allPlayers || allPlayers.length === 0) return [];
+  const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario").in("player_id", allPlayers.map(p => p.id));
+  return allPlayers.map(p => ({
+    callsign: p.callsign,
+    theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => (t.scenario as any)?.title || "Inconnu"),
+  }));
+}
+
 async function loadTheaters(playerId: string) {
   const { data } = await supabase
     .from("theaters")
@@ -803,7 +813,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   );
 }
 
-function ProfileScreen({ player, theaters, onBack, onReset }) {
+function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length; // toujours lu depuis les props live
   const [confirming, setConfirming] = useState(false);
@@ -858,6 +868,7 @@ function ProfileScreen({ player, theaters, onBack, onReset }) {
         ))
       )}
       <div className="gc-div"/>
+      <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onCommunity}>▸ OPÉRATEURS EN LIGNE</button>
       {!confirming ? (
         <button className="gc-btn danger" onClick={() => setConfirming(true)}>
           RÉINITIALISER LE DOSSIER
@@ -879,6 +890,47 @@ function ProfileScreen({ player, theaters, onBack, onReset }) {
             </button>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function CommunityScreen({ playerId, onBack }) {
+  const [others, setOthers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    loadOtherPlayersWithTheaters(playerId).then(d => { setOthers(d); setLoading(false); });
+  }, [playerId]);
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+      <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+      <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>RÉSEAU DE COMMANDEMENT</div>
+      <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:20 }}>OPÉRATEURS EN LIGNE</h2>
+      {loading ? (
+        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>
+          <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>CHARGEMENT...</span>
+        </div>
+      ) : others.length === 0 ? (
+        <p style={{ fontSize:13, color:"#5a6a88" }}>Aucun autre opérateur enregistré.</p>
+      ) : (
+        others.map((o, i) => (
+          <div key={i} className="gc-panel" style={{ padding:16, marginBottom:12 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <div className="gc-h" style={{ fontSize:18, fontWeight:600, color:"#c8a84b" }}>{o.callsign}</div>
+              <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{o.theaters.length} THÉÂTRE{o.theaters.length !== 1 ? "S" : ""}</div>
+            </div>
+            {o.theaters.length === 0 ? (
+              <p style={{ fontSize:12, color:"#2e3e56", paddingLeft:4 }}>Aucun théâtre actif.</p>
+            ) : (
+              o.theaters.map((title, j) => (
+                <div key={j} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0 5px 4px", borderBottom: j < o.theaters.length-1 ? "1px solid #162030" : "none" }}>
+                  <span className="gc-m" style={{ fontSize:9, color:"#c8a84b" }}>◈</span>
+                  <span style={{ fontSize:12, color:"#8a9ab8" }}>{title}</span>
+                </div>
+              ))
+            )}
+          </div>
+        ))
       )}
     </div>
   );
@@ -1001,7 +1053,10 @@ export default function GeoCommand() {
           <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="profile"&&(
-          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset}/>
+          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")}/>
+        )}
+        {screen==="community"&&player&&(
+          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
         )}
       </div>
     </div>

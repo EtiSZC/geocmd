@@ -1053,7 +1053,10 @@ export default function GeoCommand() {
           <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="profile"&&(
-          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset}/>
+          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")}/>
+        )}
+        {screen==="community"&&player&&(
+          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
         )}
       </div>
     </div>

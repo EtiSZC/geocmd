@@ -925,10 +925,13 @@ function CommunityScreen({ playerId, onBack }) {
             {o.theaters.length === 0 ? (
               <p style={{ fontSize:12, color:"#2e3e56", paddingLeft:4 }}>Aucun théâtre actif.</p>
             ) : (
-              o.theaters.map((title, j) => (
-                <div key={j} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0 5px 4px", borderBottom: j < o.theaters.length-1 ? "1px solid #162030" : "none" }}>
-                  <span className="gc-m" style={{ fontSize:9, color:"#c8a84b" }}>◈</span>
-                  <span style={{ fontSize:12, color:"#8a9ab8" }}>{title}</span>
+              o.theaters.map((th, j) => (
+                <div key={j} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, padding:"5px 0 5px 4px", borderBottom: j < o.theaters.length-1 ? "1px solid #162030" : "none" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span className="gc-m" style={{ fontSize:9, color:"#c8a84b" }}>◈</span>
+                    <span style={{ fontSize:12, color:"#8a9ab8" }}>{th.title}</span>
+                  </div>
+                  <span className="gc-m" style={{ fontSize:9, color:"#5a6a88" }}>{th.decisions} ACTION{th.decisions !== 1 ? "S" : ""}</span>
                 </div>
               ))
             )}

@@ -145,10 +145,13 @@ async function upsertPlayer(email: string, callsign: string) {
 async function loadOtherPlayersWithTheaters(currentPlayerId: string) {
   const { data: allPlayers } = await supabase.from("players").select("id, callsign").neq("id", currentPlayerId);
   if (!allPlayers || allPlayers.length === 0) return [];
-  const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario").in("player_id", allPlayers.map(p => p.id));
+  const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario, history").in("player_id", allPlayers.map(p => p.id));
   return allPlayers.map(p => ({
     callsign: p.callsign,
-    theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => (t.scenario as any)?.title || "Inconnu"),
+    theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => ({
+      title: (t.scenario as any)?.title || "Inconnu",
+      decisions: Array.isArray(t.history) ? (t.history as any[]).length : 0,
+    })),
   }));
 }
 

@@ -463,7 +463,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   useEffect(() => {
     if (phase !== "briefing") return;
-    if (todayDone) return;
+    if (hasPendingDecision) return;
     let alive = true;
     (async () => {
       let brief = null;

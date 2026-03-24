@@ -813,7 +813,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   );
 }
 
-function ProfileScreen({ player, theaters, onBack, onReset }) {
+function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length; // toujours lu depuis les props live
   const [confirming, setConfirming] = useState(false);

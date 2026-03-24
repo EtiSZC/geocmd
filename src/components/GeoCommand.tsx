@@ -165,7 +165,7 @@ async function insertTheater(playerId: string, scenario: any) {
   return data;
 }
 
-async function updateTheater(theaterId: string, updates: { history?: any; consequence?: string | null }) {
+async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any }) {
   await supabase.from("theaters").update(updates).eq("id", theaterId);
 }
 
@@ -227,7 +227,11 @@ function TerminalLoader({ messages=[] }) {
 }
 
 function Header({ player, theaters, onProfile }) {
-  const pendingCount = theaters.filter(t => !t.history.some(h => h.date === fmtDate())).length;
+  const readyCount = theaters.filter(t => {
+    const last = t.history[t.history.length - 1];
+    // Ready to act = no pending decision (either no history, or consequence received)
+    return !last?.decided_at || !!t.consequence;
+  }).length;
   return (
     <header className="gc-header">
       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -235,8 +239,8 @@ function Header({ player, theaters, onProfile }) {
           GEO<span style={{color:"#dce4f0"}}>CMD</span>
         </span>
         {theaters.length > 0 && (
-          <span className="gc-m" style={{ fontSize:10, color: pendingCount > 0 ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
-            {pendingCount > 0 ? `${pendingCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
+          <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
+            {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
           </span>
         )}
       </div>
@@ -309,7 +313,8 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
       {theaters.length > 0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
           {theaters.map((t, i) => {
-            const todayDone = t.history.some(h => h.date === today);
+            const lastH = t.history[t.history.length - 1];
+            const hasPending = !!(lastH?.decided_at && !t.consequence);
             const uc = urgencyColor(t.scenario.urgency || 3);
             return (
               <div
@@ -321,11 +326,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = todayDone?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = hasPending?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
               >
                 {/* accent bar */}
-                <div style={{ width:3, alignSelf:"stretch", background: todayDone?"#1e2e48":uc, flexShrink:0 }} />
+                <div style={{ width:3, alignSelf:"stretch", background: hasPending?"#ff8800":uc, flexShrink:0 }} />
 
                 {/* content */}
                 <div style={{ flex:1, padding:"16px 16px" }}>
@@ -340,9 +345,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                 {/* status */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10, padding:"16px 16px", flexShrink:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span className={`gc-dot ${todayDone?"grey":"orange"}`} />
-                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: todayDone?"#5a6a88":"#ff8800" }}>
-                      {todayDone ? "TRANSMIS" : "À DÉCIDER"}
+                    <span className={`gc-dot ${hasPending?"orange":"grey"}`} />
+                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: hasPending?"#ff8800":"#5a6a88" }}>
+                      {hasPending ? "EN COURS" : "DISPONIBLE"}
                     </span>
                   </div>
                   <button
@@ -455,11 +460,15 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
 
   const { scenario, history } = theater;
   const today = fmtDate();
-  const todayDone = history.some(h=>h.date===today);
+  // A decision is "pending" if the last history entry has decided_at but no consequence yet
+  const lastEntry_ = history[history.length - 1];
+  const hasPendingDecision = !!(lastEntry_?.decided_at && !theater.consequence);
+  // Player can start a new briefing only if there's no pending unresolved decision
+  const canStartNewBriefing = !hasPendingDecision;
 
   useEffect(() => {
     if (phase !== "briefing") return;
-    if (todayDone) return;
+    if (hasPendingDecision) return;
     let alive = true;
     (async () => {
       let brief = null;
@@ -538,7 +547,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   }, [phase, consequenceReady, theater.consequence, generatingConsequence]);
 
   // ── IDLE : résumé du théâtre, pas de chargement ──
-  if (phase === "idle" && !todayDone) {
+  if (phase === "idle" && canStartNewBriefing) {
     const last = history[history.length - 1];
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
@@ -639,7 +648,8 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   }
 
   // Already played today
-  if (todayDone) {
+  // Show "pending" state when a decision is awaiting its consequence
+  if (phase === "idle" && hasPendingDecision) {
     const last = history[history.length-1];
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
@@ -651,30 +661,25 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
         <div className="gc-h" style={{ fontSize:22, fontWeight:600, letterSpacing:2, marginTop:10, marginBottom:3 }}>{scenario.title}</div>
         <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", marginBottom:22 }}>{scenario.playerRole} — {scenario.playerCountry}</div>
         <div className="gc-panel" style={{ padding:20, marginBottom:16 }}>
-          <div className="gc-m" style={{ fontSize:11, color:"#00e87a", marginBottom:8 }}>✓ ORDRE DU JOUR TRANSMIS</div>
+          <div className="gc-m" style={{ fontSize:11, color:"#ff8800", marginBottom:8 }}>⏳ ORDRE EN COURS D'EXÉCUTION</div>
           <div style={{ fontSize:14, color:"#dce4f0", marginBottom:4 }}>{last?.actionLabel}</div>
-          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>Transmis le {last?.date}</div>
-        </div>
-        {theater.consequence && (
-          <div>
-            <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS SUR LE TERRAIN</div>
-            <div className="gc-consequence">
-              <div className="gc-h" style={{ fontSize:17, fontWeight:600, marginBottom:6 }}>{theater.consequence.headline}</div>
-              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{theater.consequence.narrative}</p>
-              {theater.consequence.metrics?.length>0 && (
-                <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-                  {theater.consequence.metrics.map((m,i) => (
-                    <span key={i} className="gc-m" style={{ fontSize:10, padding:"3px 8px", border:`1px solid ${m.positive?"#00e87a":"#ff3344"}`, color:m.positive?"#00e87a":"#ff3344" }}>
-                      {m.label}: {m.change}
-                    </span>
-                  ))}
-                </div>
-              )}
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginBottom:12 }}>Transmis le {last?.date}</div>
+          {!consequenceReady && countdown && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:8 }}>
+              <span className="gc-dot orange"/>
+              <div>
+                <div className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:2 }}>DÉPLOIEMENT EN COURS</div>
+                <div className="gc-h" style={{ fontSize:32, fontWeight:700, color:"#c8a84b", marginTop:4, letterSpacing:4 }}>{countdown}</div>
+                <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", marginTop:4, letterSpacing:1.5 }}>EFFETS SUR LE TERRAIN DANS {countdown}</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {consequenceReady && generatingConsequence && (
+            <TerminalLoader messages={["ANALYSE DES EFFETS SUR LE TERRAIN...", "COMPILATION DES RAPPORTS...", "ÉVALUATION DES CONSÉQUENCES..."]}/>
+          )}
+        </div>
         <div className="gc-div"/>
-        <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>REVENEZ DEMAIN POUR LE PROCHAIN BRIEFING</div>
+        <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>ATTENDEZ LA RÉSOLUTION DE VOTRE ORDRE</div>
       </div>
     );
   }
@@ -925,15 +930,18 @@ export default function GeoCommand() {
     setTheaters(prev => {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
-        const today = fmtDate();
-        const alreadyLogged = t.history.some((h: any) => h.date === today);
-        const newHistory = alreadyLogged
-          ? t.history
-          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
-        const newConsequence = consequence !== null ? consequence : t.consequence;
-        // Persist to DB
-        if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: newConsequence });
-        return { ...t, history: newHistory, consequence: newConsequence };
+        if (consequence !== null) {
+          // Consequence arrived — store it, keep history
+          const newConsequence = consequence;
+          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          return { ...t, consequence: newConsequence };
+        } else {
+          // New decision made — add to history, clear old consequence
+          const today = fmtDate();
+          const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
+          if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: null });
+          return { ...t, history: newHistory, consequence: null };
+        }
       });
       return updated;
     });

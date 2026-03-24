@@ -227,7 +227,13 @@ function TerminalLoader({ messages=[] }) {
 }
 
 function Header({ player, theaters, onProfile }) {
-  const pendingCount = theaters.filter(t => !t.history.some(h => h.date === fmtDate())).length;
+  const pendingCount = theaters.filter(t => {
+    const last = t.history[t.history.length - 1];
+    return !(last?.decided_at && !t.consequence); // not pending = can act
+  }).length === 0 ? theaters.length : theaters.filter(t => {
+    const last = t.history[t.history.length - 1];
+    return !!(last?.decided_at && !t.consequence);
+  }).length;
   return (
     <header className="gc-header">
       <div style={{ display:"flex", alignItems:"center", gap:10 }}>

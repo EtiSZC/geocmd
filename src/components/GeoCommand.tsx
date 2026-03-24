@@ -239,8 +239,8 @@ function Header({ player, theaters, onProfile }) {
           GEO<span style={{color:"#dce4f0"}}>CMD</span>
         </span>
         {theaters.length > 0 && (
-          <span className="gc-m" style={{ fontSize:10, color: pendingCount > 0 ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
-            {pendingCount > 0 ? `${pendingCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
+          <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
+            {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
           </span>
         )}
       </div>

@@ -927,15 +927,18 @@ export default function GeoCommand() {
     setTheaters(prev => {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
-        const today = fmtDate();
-        const alreadyLogged = t.history.some((h: any) => h.date === today);
-        const newHistory = alreadyLogged
-          ? t.history
-          : [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
-        const newConsequence = consequence !== null ? consequence : t.consequence;
-        // Persist to DB
-        if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: newConsequence });
-        return { ...t, history: newHistory, consequence: newConsequence };
+        if (consequence !== null) {
+          // Consequence arrived — store it, keep history
+          const newConsequence = consequence;
+          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          return { ...t, consequence: newConsequence };
+        } else {
+          // New decision made — add to history, clear old consequence
+          const today = fmtDate();
+          const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
+          if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: null });
+          return { ...t, history: newHistory, consequence: null };
+        }
       });
       return updated;
     });

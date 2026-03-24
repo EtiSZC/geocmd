@@ -643,7 +643,8 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   }
 
   // Already played today
-  if (todayDone) {
+  // Show "pending" state when a decision is awaiting its consequence
+  if (phase === "idle" && hasPendingDecision) {
     const last = history[history.length-1];
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">

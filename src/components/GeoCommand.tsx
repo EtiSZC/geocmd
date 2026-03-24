@@ -656,30 +656,25 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
         <div className="gc-h" style={{ fontSize:22, fontWeight:600, letterSpacing:2, marginTop:10, marginBottom:3 }}>{scenario.title}</div>
         <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", marginBottom:22 }}>{scenario.playerRole} — {scenario.playerCountry}</div>
         <div className="gc-panel" style={{ padding:20, marginBottom:16 }}>
-          <div className="gc-m" style={{ fontSize:11, color:"#00e87a", marginBottom:8 }}>✓ ORDRE DU JOUR TRANSMIS</div>
+          <div className="gc-m" style={{ fontSize:11, color:"#ff8800", marginBottom:8 }}>⏳ ORDRE EN COURS D'EXÉCUTION</div>
           <div style={{ fontSize:14, color:"#dce4f0", marginBottom:4 }}>{last?.actionLabel}</div>
-          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>Transmis le {last?.date}</div>
-        </div>
-        {theater.consequence && (
-          <div>
-            <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS SUR LE TERRAIN</div>
-            <div className="gc-consequence">
-              <div className="gc-h" style={{ fontSize:17, fontWeight:600, marginBottom:6 }}>{theater.consequence.headline}</div>
-              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{theater.consequence.narrative}</p>
-              {theater.consequence.metrics?.length>0 && (
-                <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-                  {theater.consequence.metrics.map((m,i) => (
-                    <span key={i} className="gc-m" style={{ fontSize:10, padding:"3px 8px", border:`1px solid ${m.positive?"#00e87a":"#ff3344"}`, color:m.positive?"#00e87a":"#ff3344" }}>
-                      {m.label}: {m.change}
-                    </span>
-                  ))}
-                </div>
-              )}
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginBottom:12 }}>Transmis le {last?.date}</div>
+          {!consequenceReady && countdown && (
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:8 }}>
+              <span className="gc-dot orange"/>
+              <div>
+                <div className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:2 }}>DÉPLOIEMENT EN COURS</div>
+                <div className="gc-h" style={{ fontSize:32, fontWeight:700, color:"#c8a84b", marginTop:4, letterSpacing:4 }}>{countdown}</div>
+                <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", marginTop:4, letterSpacing:1.5 }}>EFFETS SUR LE TERRAIN DANS {countdown}</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {consequenceReady && generatingConsequence && (
+            <TerminalLoader messages={["ANALYSE DES EFFETS SUR LE TERRAIN...", "COMPILATION DES RAPPORTS...", "ÉVALUATION DES CONSÉQUENCES..."]}/>
+          )}
+        </div>
         <div className="gc-div"/>
-        <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>REVENEZ DEMAIN POUR LE PROCHAIN BRIEFING</div>
+        <div className="gc-m" style={{ fontSize:10, color:"#2e3e56", textAlign:"center", letterSpacing:2 }}>ATTENDEZ LA RÉSOLUTION DE VOTRE ORDRE</div>
       </div>
     );
   }

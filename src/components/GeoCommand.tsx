@@ -327,11 +327,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = todayDone?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = hasPending?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
               >
                 {/* accent bar */}
-                <div style={{ width:3, alignSelf:"stretch", background: todayDone?"#1e2e48":uc, flexShrink:0 }} />
+                <div style={{ width:3, alignSelf:"stretch", background: hasPending?"#ff8800":uc, flexShrink:0 }} />
 
                 {/* content */}
                 <div style={{ flex:1, padding:"16px 16px" }}>

@@ -982,7 +982,7 @@ export default function GeoCommand() {
         if (meta.email) {
           const p = await loadPlayerByEmail(meta.email);
           if (p) {
-            setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id });
+            setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id, influence_score: (p as any).influence_score || DEFAULT_SCORE });
             const t = await loadTheaters(p.id);
             setTheaters(t);
             setScreen("hub");

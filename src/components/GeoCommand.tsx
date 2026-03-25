@@ -837,9 +837,38 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   );
 }
 
+function ScoreBar({ label, value, color }) {
+  return (
+    <div style={{ marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+        <span className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:1.5 }}>{label}</span>
+        <span className="gc-m" style={{ fontSize:11, color, fontWeight:700 }}>{value}</span>
+      </div>
+      <div style={{ height:4, background:"#162030", position:"relative" }}>
+        <div style={{ height:"100%", width:`${value}%`, background:color, transition:"width .6s ease", boxShadow:`0 0 8px ${color}44` }}/>
+      </div>
+    </div>
+  );
+}
+
+function ScorePanel({ score, compact = false }) {
+  const s = score || DEFAULT_SCORE;
+  return (
+    <div className="gc-panel" style={{ padding: compact ? 12 : 18, marginBottom: compact ? 0 : 20 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: compact ? 8 : 14 }}>
+        <span className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2 }}>INFLUENCE GÉOPOLITIQUE</span>
+        <span className="gc-h" style={{ fontSize: compact ? 20 : 28, fontWeight:700, color:"#c8a84b" }}>{totalScore(s)}</span>
+      </div>
+      {Object.keys(SCORE_LABELS).map(k => (
+        <ScoreBar key={k} label={SCORE_LABELS[k]} value={s[k]||50} color={SCORE_COLORS[k]}/>
+      ))}
+    </div>
+  );
+}
+
 function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
-  const nbT      = theaters.length; // toujours lu depuis les props live
+  const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
@@ -849,6 +878,8 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
         <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h2>
         <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", marginTop:3 }}>{player.email}</div>
       </div>
+
+      <ScorePanel score={player.influence_score}/>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
         {[

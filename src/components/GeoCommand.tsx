@@ -1065,6 +1065,120 @@ function CommunityScreen({ playerId, onBack }) {
   );
 }
 
+function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
+  const active = events.filter(e => !respondedIds.includes(e.id));
+  const [sel, setSel] = useState<string | null>(null);
+  const [selOption, setSelOption] = useState<any>(null);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const tick = () => {
+      const cd: Record<string, string> = {};
+      for (const ev of active) {
+        const remaining = new Date(ev.expires_at).getTime() - Date.now();
+        if (remaining <= 0) { cd[ev.id] = "EXPIRÉ"; continue; }
+        const h = Math.floor(remaining / 3600000);
+        const m = Math.floor((remaining % 3600000) / 60000);
+        const s = Math.floor((remaining % 60000) / 1000);
+        cd[ev.id] = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      }
+      setCountdowns(cd);
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [active.length]);
+
+  if (active.length === 0) return null;
+
+  const urgencyColor = (u: number) => u >= 5 ? "#ff3344" : u >= 4 ? "#ff8800" : "#c8a84b";
+  const catColor = (cat: string) => cat === "militaire" ? "#ff3344" : cat === "diplomatique" ? "#00e87a" : cat === "économique" ? "#c8a84b" : "#4d8eff";
+
+  return (
+    <div style={{ padding: "0 20px", maxWidth: 480, margin: "0 auto" }}>
+      {active.map(ev => {
+        const isOpen = sel === ev.id;
+        const options = Array.isArray(ev.options) ? ev.options : [];
+        const expired = countdowns[ev.id] === "EXPIRÉ";
+
+        return (
+          <div key={ev.id} style={{
+            marginBottom: 12,
+            border: `1px solid ${urgencyColor(ev.urgency)}`,
+            background: `rgba(${ev.urgency >= 5 ? "255,51,68" : ev.urgency >= 4 ? "255,136,0" : "200,168,75"}, 0.08)`,
+            animation: "fadeUp .35s ease forwards",
+          }}>
+            <div
+              onClick={() => { setSel(isOpen ? null : ev.id); setSelOption(null); }}
+              style={{ padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14 }}>⚡</span>
+                  <span className="gc-m" style={{ fontSize: 9, color: urgencyColor(ev.urgency), letterSpacing: 2, animation: "blink 1.5s ease-in-out infinite" }}>
+                    CRISE FLASH
+                  </span>
+                </div>
+                <div className="gc-h" style={{ fontSize: 17, fontWeight: 700, letterSpacing: 1 }}>{ev.title}</div>
+                <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", marginTop: 4 }}>{ev.region} — {(ev.event_type || "").toUpperCase()}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div className="gc-h" style={{ fontSize: 18, fontWeight: 700, color: expired ? "#ff3344" : urgencyColor(ev.urgency), letterSpacing: 2 }}>
+                  {countdowns[ev.id] || "..."}
+                </div>
+                <div className="gc-m" style={{ fontSize: 8, color: "#5a6a88", letterSpacing: 1.5 }}>TEMPS RESTANT</div>
+              </div>
+            </div>
+
+            {isOpen && !expired && (
+              <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>
+                <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
+                <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", letterSpacing: 2, marginBottom: 10 }}>◈ RÉPONSE RAPIDE</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {options.map((opt: any) => (
+                    <div
+                      key={opt.id}
+                      onClick={() => setSelOption(selOption?.id === opt.id ? null : opt)}
+                      style={{
+                        padding: "12px 14px",
+                        border: `1px solid ${selOption?.id === opt.id ? catColor(opt.cat) : "var(--brd)"}`,
+                        background: selOption?.id === opt.id ? `${catColor(opt.cat)}11` : "var(--surf)",
+                        cursor: "pointer",
+                        transition: "all .15s",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span className="gc-h" style={{ fontSize: 14, fontWeight: 600 }}>{opt.label}</span>
+                        <span className="gc-m" style={{ fontSize: 8, color: catColor(opt.cat), letterSpacing: 1 }}>{(opt.cat || "").toUpperCase()}</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "#5a6a88", lineHeight: 1.5 }}>{opt.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                {selOption && (
+                  <button
+                    className="gc-btn full"
+                    style={{ marginTop: 12 }}
+                    onClick={() => onRespond(ev.id, selOption)}
+                  >
+                    ▸ CONFIRMER LA RÉPONSE
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isOpen && expired && (
+              <div style={{ padding: "0 16px 16px" }}>
+                <div className="gc-m" style={{ fontSize: 11, color: "#ff3344", letterSpacing: 2 }}>ÉVÉNEMENT EXPIRÉ — RÉPONSE IMPOSSIBLE</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════
 // ROOT
 // ═══════════════════════════════════════════════

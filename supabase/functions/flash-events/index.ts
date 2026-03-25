@@ -178,10 +178,16 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { action } = await req.json().catch(() => ({ action: "generate" }));
+    const { action, force } = await req.json().catch(() => ({ action: "generate", force: false }));
 
     if (action === "generate") {
-      // Generate a flash event via AI
+      // Random trigger: 25% chance unless forced
+      if (!force && Math.random() > 0.25) {
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: "Random roll — no event this time" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
       const aiResp = await fetch(AI_URL, {

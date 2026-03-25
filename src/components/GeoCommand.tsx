@@ -232,6 +232,7 @@ const FB_CONSEQUENCE = (scenario, actionLabel) => ({
   headline: `Effets observés sur ${scenario.title}`,
   narrative: `Les premiers rapports de terrain indiquent que la décision « ${actionLabel} » produit désormais des effets mesurables. La situation reste évolutive et une consolidation du renseignement est en cours avant le prochain briefing.`,
   metrics: [],
+  scoreDeltas: { stability: 2, diplomacy: -1, military: 3, intelligence: 1 },
 });
 
 function TerminalLoader({ messages=[] }) {

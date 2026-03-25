@@ -267,15 +267,17 @@ function TerminalLoader({ messages=[] }) {
 function Header({ player, theaters, onProfile }) {
   const readyCount = theaters.filter(t => {
     const last = t.history[t.history.length - 1];
-    // Ready to act = no pending decision (either no history, or consequence received)
     return !last?.decided_at || !!t.consequence;
   }).length;
+  const score = player?.influence_score || DEFAULT_SCORE;
+  const total = totalScore(score);
   return (
     <header className="gc-header">
       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
         <span className="gc-h" style={{ fontSize:20, fontWeight:700, letterSpacing:4, color:"#c8a84b" }}>
           GEO<span style={{color:"#dce4f0"}}>CMD</span>
         </span>
+        <span className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>◈ {total}</span>
         {theaters.length > 0 && (
           <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
             {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}

@@ -997,7 +997,7 @@ export default function GeoCommand() {
   const handleLogin = useCallback(async (p: any) => {
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }
-    const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id };
+    const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id, influence_score: (dbPlayer as any).influence_score || DEFAULT_SCORE };
     const t = await loadTheaters(dbPlayer.id);
     setPlayer(playerObj);
     setTheaters(t);

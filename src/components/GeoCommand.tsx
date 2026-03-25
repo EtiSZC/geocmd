@@ -203,6 +203,19 @@ const svMeta = (d: any) => localStorage.setItem(META_KEY, JSON.stringify(d));
 
 const fmtDate = () => new Date().toLocaleDateString("fr-FR");
 const MAX_THEATERS = 4;
+const DEFAULT_SCORE = { stability: 50, diplomacy: 50, military: 50, intelligence: 50 };
+const SCORE_LABELS = { stability: "STABILITÉ", diplomacy: "DIPLOMATIE", military: "MILITAIRE", intelligence: "RENSEIGNEMENT" };
+const SCORE_COLORS = { stability: "#00e87a", diplomacy: "#4d8eff", military: "#ff3344", intelligence: "#c8a84b" };
+function totalScore(s: any) { if (!s) return 200; return (s.stability||50)+(s.diplomacy||50)+(s.military||50)+(s.intelligence||50); }
+function clampScore(s: any) { const c = {...s}; for (const k of Object.keys(c)) c[k] = Math.max(0, Math.min(100, c[k])); return c; }
+function applyDeltas(current: any, deltas: any) {
+  if (!deltas) return current;
+  const s = { ...(current || DEFAULT_SCORE) };
+  for (const k of ["stability","diplomacy","military","intelligence"]) {
+    if (deltas[k] !== undefined) s[k] = (s[k]||50) + deltas[k];
+  }
+  return clampScore(s);
+}
 
 const FALLBACK_SCENARIOS = [
   { id:"ukraine",      title:"Guerre en Ukraine",             region:"Europe de l'Est",  type:"Conflit armé",          playerRole:"Chef d'État-Major",    playerCountry:"Ukraine",         description:"Le front s'est stabilisé mais une nouvelle offensive russe est signalée au nord-est.", urgency:5 },

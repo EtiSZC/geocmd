@@ -1189,6 +1189,8 @@ export default function GeoCommand() {
   const [player, setPlayer]   = useState<any>(null);
   const [theaters, setTheaters] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState<number|null>(null);
+  const [flashEvents, setFlashEvents] = useState<any[]>([]);
+  const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
 
   // Bootstrap: restore last session from Supabase
   useEffect(() => {
@@ -1201,6 +1203,13 @@ export default function GeoCommand() {
             setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id, influence_score: (p as any).influence_score || DEFAULT_SCORE });
             const t = await loadTheaters(p.id);
             setTheaters(t);
+            // Load flash events
+            const fe = await loadActiveFlashEvents();
+            setFlashEvents(fe);
+            const responded = await loadPlayerFlashResponses(p.id);
+            setRespondedFlashIds(responded);
+            // Subscribe to push
+            subscribeToPush(p.id);
             setScreen("hub");
             return;
           }
@@ -1210,6 +1219,16 @@ export default function GeoCommand() {
     })();
   }, []);
 
+  // Refresh flash events every 60s
+  useEffect(() => {
+    if (!player) return;
+    const iv = setInterval(async () => {
+      const fe = await loadActiveFlashEvents();
+      setFlashEvents(fe);
+    }, 60000);
+    return () => clearInterval(iv);
+  }, [player]);
+
   const handleLogin = useCallback(async (p: any) => {
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }
@@ -1218,6 +1237,12 @@ export default function GeoCommand() {
     setPlayer(playerObj);
     setTheaters(t);
     svMeta({ email: p.email });
+    // Load flash events + subscribe to push
+    const fe = await loadActiveFlashEvents();
+    setFlashEvents(fe);
+    const responded = await loadPlayerFlashResponses(dbPlayer.id);
+    setRespondedFlashIds(responded);
+    subscribeToPush(dbPlayer.id);
     setScreen("hub");
   }, []);
 
@@ -1245,10 +1270,8 @@ export default function GeoCommand() {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         if (consequence !== null) {
-          // Consequence arrived — store it and apply score deltas
           const newConsequence = consequence;
           if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
-          // Apply score deltas
           if (consequence.scoreDeltas && player) {
             const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, consequence.scoreDeltas);
             setPlayer(prev => ({ ...prev, influence_score: newScore }));
@@ -1256,7 +1279,6 @@ export default function GeoCommand() {
           }
           return { ...t, consequence: newConsequence };
         } else {
-          // New decision made — add to history, clear old consequence
           const today = fmtDate();
           const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
           if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: null });
@@ -1265,6 +1287,20 @@ export default function GeoCommand() {
       });
       return updated;
     });
+  }, [player]);
+
+  const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
+    if (!player) return;
+    const ok = await respondToFlashEvent(eventId, player.dbId, option);
+    if (ok) {
+      setRespondedFlashIds(prev => [...prev, eventId]);
+      // Apply score deltas
+      if (option.scoreDeltas) {
+        const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, option.scoreDeltas);
+        setPlayer(prev => ({ ...prev, influence_score: newScore }));
+        if (player.dbId) updatePlayerScore(player.dbId, newScore);
+      }
+    }
   }, [player]);
 
   const handleReset = useCallback(async () => {
@@ -1282,6 +1318,17 @@ export default function GeoCommand() {
       <div className="gc-z">
         {screen!=="login"&&screen!=="init"&&(
           <Header player={player} theaters={theaters} onProfile={()=>setScreen("profile")}/>
+        )}
+        {/* Flash event banners — shown on hub */}
+        {screen==="hub"&&player&&flashEvents.length>0&&(
+          <div style={{ paddingTop: 12 }}>
+            <FlashEventBanner
+              events={flashEvents}
+              respondedIds={respondedFlashIds}
+              playerId={player.dbId}
+              onRespond={handleFlashRespond}
+            />
+          </div>
         )}
         {screen==="init"&&(
           <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>

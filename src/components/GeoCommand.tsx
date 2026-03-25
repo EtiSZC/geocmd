@@ -1,6 +1,69 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+async function subscribeToPush(playerId: string) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    // Save to DB
+    await supabase.from("push_subscriptions").upsert(
+      { player_id: playerId, subscription: sub.toJSON() as any },
+      { onConflict: "player_id" }
+    );
+  } catch (e) {
+    console.warn("Push subscription failed:", e);
+  }
+}
+
+async function loadActiveFlashEvents() {
+  const { data } = await supabase
+    .from("flash_events")
+    .select("*")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return data || [];
+}
+
+async function loadPlayerFlashResponses(playerId: string) {
+  const { data } = await supabase
+    .from("flash_event_responses")
+    .select("event_id")
+    .eq("player_id", playerId);
+  return (data || []).map(r => r.event_id);
+}
+
+async function respondToFlashEvent(eventId: string, playerId: string, option: any) {
+  const { error } = await supabase.from("flash_event_responses").insert({
+    event_id: eventId,
+    player_id: playerId,
+    chosen_option: option as any,
+    score_deltas: (option.scoreDeltas || null) as any,
+  });
+  return !error;
+}
+
 function injectStyles() {
   if (document.getElementById("gc-styles")) return;
   const s = document.createElement("style");

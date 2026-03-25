@@ -968,12 +968,20 @@ function CommunityScreen({ playerId, onBack }) {
       ) : others.length === 0 ? (
         <p style={{ fontSize:13, color:"#5a6a88" }}>Aucun autre opérateur enregistré.</p>
       ) : (
-        others.map((o, i) => (
+        others.sort((a, b) => totalScore(b.influence_score) - totalScore(a.influence_score)).map((o, i) => (
           <div key={i} className="gc-panel" style={{ padding:16, marginBottom:12 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
               <div className="gc-h" style={{ fontSize:18, fontWeight:600, color:"#c8a84b" }}>{o.callsign}</div>
-              <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{o.theaters.length} THÉÂTRE{o.theaters.length !== 1 ? "S" : ""}</div>
+              <div className="gc-h" style={{ fontSize:18, fontWeight:700, color:"#c8a84b" }}>◈ {totalScore(o.influence_score)}</div>
             </div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+              {Object.keys(SCORE_LABELS).map(k => (
+                <span key={k} className="gc-m" style={{ fontSize:8, color:SCORE_COLORS[k], letterSpacing:0.5 }}>
+                  {SCORE_LABELS[k].slice(0,3)} {(o.influence_score||DEFAULT_SCORE)[k]||50}
+                </span>
+              ))}
+            </div>
+            <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginBottom:6 }}>{o.theaters.length} THÉÂTRE{o.theaters.length !== 1 ? "S" : ""}</div>
             {o.theaters.length === 0 ? (
               <p style={{ fontSize:12, color:"#2e3e56", paddingLeft:4 }}>Aucun théâtre actif.</p>
             ) : (

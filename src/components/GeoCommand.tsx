@@ -143,16 +143,21 @@ async function upsertPlayer(email: string, callsign: string) {
 }
 
 async function loadOtherPlayersWithTheaters(currentPlayerId: string) {
-  const { data: allPlayers } = await supabase.from("players").select("id, callsign").neq("id", currentPlayerId);
+  const { data: allPlayers } = await supabase.from("players").select("id, callsign, influence_score").neq("id", currentPlayerId);
   if (!allPlayers || allPlayers.length === 0) return [];
   const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario, history").in("player_id", allPlayers.map(p => p.id));
   return allPlayers.map(p => ({
     callsign: p.callsign,
+    influence_score: p.influence_score as any,
     theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => ({
       title: (t.scenario as any)?.title || "Inconnu",
       decisions: Array.isArray(t.history) ? (t.history as any[]).length : 0,
     })),
   }));
+}
+
+async function updatePlayerScore(playerId: string, score: any) {
+  await supabase.from("players").update({ influence_score: score } as any).eq("id", playerId);
 }
 
 async function loadTheaters(playerId: string) {

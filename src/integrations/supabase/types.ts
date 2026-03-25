@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      flash_event_responses: {
+        Row: {
+          chosen_option: Json
+          event_id: string
+          id: string
+          player_id: string
+          responded_at: string
+          score_deltas: Json | null
+        }
+        Insert: {
+          chosen_option: Json
+          event_id: string
+          id?: string
+          player_id: string
+          responded_at?: string
+          score_deltas?: Json | null
+        }
+        Update: {
+          chosen_option?: Json
+          event_id?: string
+          id?: string
+          player_id?: string
+          responded_at?: string
+          score_deltas?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_event_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "flash_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_event_responses_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_events: {
+        Row: {
+          created_at: string
+          description: string
+          event_type: string
+          expires_at: string
+          id: string
+          options: Json
+          region: string
+          title: string
+          urgency: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          event_type: string
+          expires_at: string
+          id?: string
+          options?: Json
+          region: string
+          title: string
+          urgency?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          event_type?: string
+          expires_at?: string
+          id?: string
+          options?: Json
+          region?: string
+          title?: string
+          urgency?: number
+        }
+        Relationships: []
+      }
       players: {
         Row: {
           callsign: string
@@ -40,6 +118,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          player_id: string
+          subscription: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          player_id: string
+          subscription: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_id?: string
+          subscription?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       theaters: {
         Row: {

@@ -1029,9 +1029,15 @@ export default function GeoCommand() {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         if (consequence !== null) {
-          // Consequence arrived — store it, keep history
+          // Consequence arrived — store it and apply score deltas
           const newConsequence = consequence;
           if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          // Apply score deltas
+          if (consequence.scoreDeltas && player) {
+            const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, consequence.scoreDeltas);
+            setPlayer(prev => ({ ...prev, influence_score: newScore }));
+            if (player.dbId) updatePlayerScore(player.dbId, newScore);
+          }
           return { ...t, consequence: newConsequence };
         } else {
           // New decision made — add to history, clear old consequence
@@ -1043,7 +1049,7 @@ export default function GeoCommand() {
       });
       return updated;
     });
-  }, []);
+  }, [player]);
 
   const handleReset = useCallback(async () => {
     if (player?.dbId) await deletePlayerAndTheaters(player.dbId);

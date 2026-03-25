@@ -1,0 +1,1 @@
+ALTER TABLE public.players ADD COLUMN influence_score jsonb NOT NULL DEFAULT '{"stability":50,"diplomacy":50,"military":50,"intelligence":50}'::jsonb;

@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          influence_score: Json
           updated_at: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          influence_score?: Json
           updated_at?: string
         }
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          influence_score?: Json
           updated_at?: string
         }
         Relationships: []

@@ -143,16 +143,21 @@ async function upsertPlayer(email: string, callsign: string) {
 }
 
 async function loadOtherPlayersWithTheaters(currentPlayerId: string) {
-  const { data: allPlayers } = await supabase.from("players").select("id, callsign").neq("id", currentPlayerId);
+  const { data: allPlayers } = await supabase.from("players").select("id, callsign, influence_score").neq("id", currentPlayerId);
   if (!allPlayers || allPlayers.length === 0) return [];
   const { data: allTheaters } = await supabase.from("theaters").select("player_id, scenario, history").in("player_id", allPlayers.map(p => p.id));
   return allPlayers.map(p => ({
     callsign: p.callsign,
+    influence_score: p.influence_score as any,
     theaters: (allTheaters || []).filter(t => t.player_id === p.id).map(t => ({
       title: (t.scenario as any)?.title || "Inconnu",
       decisions: Array.isArray(t.history) ? (t.history as any[]).length : 0,
     })),
   }));
+}
+
+async function updatePlayerScore(playerId: string, score: any) {
+  await supabase.from("players").update({ influence_score: score } as any).eq("id", playerId);
 }
 
 async function loadTheaters(playerId: string) {
@@ -198,6 +203,19 @@ const svMeta = (d: any) => localStorage.setItem(META_KEY, JSON.stringify(d));
 
 const fmtDate = () => new Date().toLocaleDateString("fr-FR");
 const MAX_THEATERS = 4;
+const DEFAULT_SCORE = { stability: 50, diplomacy: 50, military: 50, intelligence: 50 };
+const SCORE_LABELS = { stability: "STABILITÉ", diplomacy: "DIPLOMATIE", military: "MILITAIRE", intelligence: "RENSEIGNEMENT" };
+const SCORE_COLORS = { stability: "#00e87a", diplomacy: "#4d8eff", military: "#ff3344", intelligence: "#c8a84b" };
+function totalScore(s: any) { if (!s) return 200; return (s.stability||50)+(s.diplomacy||50)+(s.military||50)+(s.intelligence||50); }
+function clampScore(s: any) { const c = {...s}; for (const k of Object.keys(c)) c[k] = Math.max(0, Math.min(100, c[k])); return c; }
+function applyDeltas(current: any, deltas: any) {
+  if (!deltas) return current;
+  const s = { ...(current || DEFAULT_SCORE) };
+  for (const k of ["stability","diplomacy","military","intelligence"]) {
+    if (deltas[k] !== undefined) s[k] = (s[k]||50) + deltas[k];
+  }
+  return clampScore(s);
+}
 
 const FALLBACK_SCENARIOS = [
   { id:"ukraine",      title:"Guerre en Ukraine",             region:"Europe de l'Est",  type:"Conflit armé",          playerRole:"Chef d'État-Major",    playerCountry:"Ukraine",         description:"Le front s'est stabilisé mais une nouvelle offensive russe est signalée au nord-est.", urgency:5 },
@@ -227,6 +245,7 @@ const FB_CONSEQUENCE = (scenario, actionLabel) => ({
   headline: `Effets observés sur ${scenario.title}`,
   narrative: `Les premiers rapports de terrain indiquent que la décision « ${actionLabel} » produit désormais des effets mesurables. La situation reste évolutive et une consolidation du renseignement est en cours avant le prochain briefing.`,
   metrics: [],
+  scoreDeltas: { stability: 2, diplomacy: -1, military: 3, intelligence: 1 },
 });
 
 function TerminalLoader({ messages=[] }) {
@@ -248,15 +267,17 @@ function TerminalLoader({ messages=[] }) {
 function Header({ player, theaters, onProfile }) {
   const readyCount = theaters.filter(t => {
     const last = t.history[t.history.length - 1];
-    // Ready to act = no pending decision (either no history, or consequence received)
     return !last?.decided_at || !!t.consequence;
   }).length;
+  const score = player?.influence_score || DEFAULT_SCORE;
+  const total = totalScore(score);
   return (
     <header className="gc-header">
       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
         <span className="gc-h" style={{ fontSize:20, fontWeight:700, letterSpacing:4, color:"#c8a84b" }}>
           GEO<span style={{color:"#dce4f0"}}>CMD</span>
         </span>
+        <span className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>◈ {total}</span>
         {theaters.length > 0 && (
           <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
             {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
@@ -816,9 +837,38 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
   );
 }
 
+function ScoreBar({ label, value, color }) {
+  return (
+    <div style={{ marginBottom:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+        <span className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:1.5 }}>{label}</span>
+        <span className="gc-m" style={{ fontSize:11, color, fontWeight:700 }}>{value}</span>
+      </div>
+      <div style={{ height:4, background:"#162030", position:"relative" }}>
+        <div style={{ height:"100%", width:`${value}%`, background:color, transition:"width .6s ease", boxShadow:`0 0 8px ${color}44` }}/>
+      </div>
+    </div>
+  );
+}
+
+function ScorePanel({ score, compact = false }) {
+  const s = score || DEFAULT_SCORE;
+  return (
+    <div className="gc-panel" style={{ padding: compact ? 12 : 18, marginBottom: compact ? 0 : 20 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: compact ? 8 : 14 }}>
+        <span className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2 }}>INFLUENCE GÉOPOLITIQUE</span>
+        <span className="gc-h" style={{ fontSize: compact ? 20 : 28, fontWeight:700, color:"#c8a84b" }}>{totalScore(s)}</span>
+      </div>
+      {Object.keys(SCORE_LABELS).map(k => (
+        <ScoreBar key={k} label={SCORE_LABELS[k]} value={s[k]||50} color={SCORE_COLORS[k]}/>
+      ))}
+    </div>
+  );
+}
+
 function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
-  const nbT      = theaters.length; // toujours lu depuis les props live
+  const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
@@ -828,6 +878,8 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
         <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h2>
         <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", marginTop:3 }}>{player.email}</div>
       </div>
+
+      <ScorePanel score={player.influence_score}/>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
         {[
@@ -916,12 +968,20 @@ function CommunityScreen({ playerId, onBack }) {
       ) : others.length === 0 ? (
         <p style={{ fontSize:13, color:"#5a6a88" }}>Aucun autre opérateur enregistré.</p>
       ) : (
-        others.map((o, i) => (
+        others.sort((a, b) => totalScore(b.influence_score) - totalScore(a.influence_score)).map((o, i) => (
           <div key={i} className="gc-panel" style={{ padding:16, marginBottom:12 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
               <div className="gc-h" style={{ fontSize:18, fontWeight:600, color:"#c8a84b" }}>{o.callsign}</div>
-              <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{o.theaters.length} THÉÂTRE{o.theaters.length !== 1 ? "S" : ""}</div>
+              <div className="gc-h" style={{ fontSize:18, fontWeight:700, color:"#c8a84b" }}>◈ {totalScore(o.influence_score)}</div>
             </div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+              {Object.keys(SCORE_LABELS).map(k => (
+                <span key={k} className="gc-m" style={{ fontSize:8, color:SCORE_COLORS[k], letterSpacing:0.5 }}>
+                  {SCORE_LABELS[k].slice(0,3)} {(o.influence_score||DEFAULT_SCORE)[k]||50}
+                </span>
+              ))}
+            </div>
+            <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginBottom:6 }}>{o.theaters.length} THÉÂTRE{o.theaters.length !== 1 ? "S" : ""}</div>
             {o.theaters.length === 0 ? (
               <p style={{ fontSize:12, color:"#2e3e56", paddingLeft:4 }}>Aucun théâtre actif.</p>
             ) : (
@@ -961,7 +1021,7 @@ export default function GeoCommand() {
         if (meta.email) {
           const p = await loadPlayerByEmail(meta.email);
           if (p) {
-            setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id });
+            setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id, influence_score: (p as any).influence_score || DEFAULT_SCORE });
             const t = await loadTheaters(p.id);
             setTheaters(t);
             setScreen("hub");
@@ -976,7 +1036,7 @@ export default function GeoCommand() {
   const handleLogin = useCallback(async (p: any) => {
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }
-    const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id };
+    const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id, influence_score: (dbPlayer as any).influence_score || DEFAULT_SCORE };
     const t = await loadTheaters(dbPlayer.id);
     setPlayer(playerObj);
     setTheaters(t);
@@ -1008,9 +1068,15 @@ export default function GeoCommand() {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         if (consequence !== null) {
-          // Consequence arrived — store it, keep history
+          // Consequence arrived — store it and apply score deltas
           const newConsequence = consequence;
           if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          // Apply score deltas
+          if (consequence.scoreDeltas && player) {
+            const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, consequence.scoreDeltas);
+            setPlayer(prev => ({ ...prev, influence_score: newScore }));
+            if (player.dbId) updatePlayerScore(player.dbId, newScore);
+          }
           return { ...t, consequence: newConsequence };
         } else {
           // New decision made — add to history, clear old consequence
@@ -1022,7 +1088,7 @@ export default function GeoCommand() {
       });
       return updated;
     });
-  }, []);
+  }, [player]);
 
   const handleReset = useCallback(async () => {
     if (player?.dbId) await deletePlayerAndTheaters(player.dbId);

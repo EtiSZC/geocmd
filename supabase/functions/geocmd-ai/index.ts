@@ -102,9 +102,10 @@ Catégories et couleurs: militaire=#ff3344, diplomatique=#00e87a, économique=#c
         `Tu es un système de simulation géopolitique réaliste. Réponds UNIQUEMENT en JSON valide.`,
         `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole}.
 Action décidée: ${action.label} — ${action.desc || ""}
+Catégorie de l'action: ${action.cat || "inconnue"}
 Résultat projeté: ${action.outcome}
-Génère une conséquence réaliste et nuancée. JSON:
-{"headline":"Titre accrocheur de type dépêche","narrative":"2-3 phrases réalistes décrivant les conséquences.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}]}`
+Génère une conséquence réaliste et nuancée avec l'impact sur 4 indicateurs d'influence géopolitique (chaque delta entre -15 et +15, la somme ne doit PAS toujours être positive). JSON:
+{"headline":"Titre accrocheur de type dépêche","narrative":"2-3 phrases réalistes décrivant les conséquences.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}],"scoreDeltas":{"stability":5,"diplomacy":-3,"military":8,"intelligence":-2}}`
       );
       result = parseJSON(raw);
 

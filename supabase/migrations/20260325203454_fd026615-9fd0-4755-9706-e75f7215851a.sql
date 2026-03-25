@@ -1,0 +1,1 @@
+CREATE POLICY "Allow insert flash_events for anon" ON public.flash_events FOR INSERT TO anon WITH CHECK (true);

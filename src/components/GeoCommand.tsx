@@ -1117,6 +1117,63 @@ function CommunityScreen({ playerId, onBack }) {
   );
 }
 
+const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
+function getNotifPrefs(): { flash: boolean; theater: boolean } {
+  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false }; } catch { return { flash: true, theater: true }; }
+}
+function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
+  localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+}
+
+function SettingsScreen({ onBack }) {
+  const [prefs, setPrefs] = useState(getNotifPrefs);
+  const toggle = (key: "flash" | "theater") => {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    saveNotifPrefs(next);
+  };
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+      <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+      <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>CONFIGURATION</div>
+      <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:24 }}>NOTIFICATIONS</h2>
+
+      {[
+        { key: "flash" as const, label: "ÉVÉNEMENTS FLASH", desc: "Alertes push lors de nouvelles crises éclair (probabilité 25%/heure)." },
+        { key: "theater" as const, label: "THÉÂTRES — STATUT PRÊT", desc: "Notification push lorsqu'un théâtre est prêt après 5 heures d'attente." },
+      ].map(item => (
+        <div key={item.key} className="gc-panel" style={{ padding:18, marginBottom:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <span className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2 }}>{item.label}</span>
+            <button
+              onClick={() => toggle(item.key)}
+              style={{
+                width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
+                background: prefs[item.key] ? "#00e87a" : "#2e3e56",
+                position:"relative", transition:"background .2s",
+              }}
+            >
+              <div style={{
+                width:20, height:20, borderRadius:10, background:"#fff",
+                position:"absolute", top:3,
+                left: prefs[item.key] ? 25 : 3,
+                transition:"left .2s",
+              }}/>
+            </button>
+          </div>
+          <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:0 }}>{item.desc}</p>
+        </div>
+      ))}
+
+      <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
+        <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>
+          ℹ Les notifications push nécessitent l'autorisation du navigateur. Si vous désactivez un type ci-dessus, les notifications correspondantes ne seront plus envoyées à ce terminal.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);

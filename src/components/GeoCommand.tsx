@@ -135,6 +135,17 @@ function injectStyles() {
     .gc-dot.green  { background:#00e87a; box-shadow:0 0 7px #00e87a; }
     .gc-dot.orange { background:#ff8800; box-shadow:0 0 7px #ff8800; }
     .gc-dot.grey   { background:var(--muted2); box-shadow:none; animation:none; }
+    .gc-notif-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:20px; height:20px; border-radius:10px; padding:0 6px;
+      background:#00e87a; color:#060810; font-family:'Share Tech Mono',monospace;
+      font-size:10px; font-weight:700; letter-spacing:1px;
+      animation:pulse-badge 2s ease-in-out infinite;
+      box-shadow:0 0 12px rgba(0,232,122,0.5);
+    }
+    @keyframes pulse-badge { 0%,100%{box-shadow:0 0 8px rgba(0,232,122,0.4)} 50%{box-shadow:0 0 18px rgba(0,232,122,0.7)} }
+    .gc-ready-card { border-color:rgba(0,232,122,0.3) !important; background:rgba(0,232,122,0.03) !important; }
+    .gc-ready-card:hover { border-color:rgba(0,232,122,0.5) !important; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
     .gc-theater {
       background:var(--surf); border:1px solid var(--brd); padding:18px 20px;

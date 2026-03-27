@@ -1128,16 +1128,16 @@ function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
 function SettingsScreen({ playerId, onBack }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
-  const toggle = async (key: "flash" | "theater") => {
+  const toggle = async (key: "flash" | "theater" | "community") => {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     saveNotifPrefs(next);
-    // Sync to DB
     if (playerId) {
       setSaving(true);
       await supabase.from("push_subscriptions").update({
         notify_flash: next.flash,
         notify_theater: next.theater,
+        notify_community: next.community,
       }).eq("player_id", playerId);
       setSaving(false);
     }

@@ -417,8 +417,15 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
         <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
           {theaters.map((t, i) => {
             const lastH = t.history[t.history.length - 1];
-            const hasPending = !!(lastH?.decided_at && !t.consequence);
+            const DELAY_MS = 5 * 60 * 60 * 1000;
+            const decidedAt = lastH?.decided_at ? new Date(lastH.decided_at).getTime() : 0;
+            const isWaiting = !!(lastH?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) < DELAY_MS);
+            const isReady = !!(lastH?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) >= DELAY_MS);
+            const isAvailable = !lastH?.decided_at || !!t.consequence;
             const uc = urgencyColor(t.scenario.urgency || 3);
+            const statusColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : "#5a6a88";
+            const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "DISPONIBLE";
+            const barColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : uc;
             return (
               <div
                 key={t.scenario.id}
@@ -429,11 +436,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = hasPending?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
               >
                 {/* accent bar */}
-                <div style={{ width:3, alignSelf:"stretch", background: hasPending?"#ff8800":uc, flexShrink:0 }} />
+                <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />
 
                 {/* content */}
                 <div style={{ flex:1, padding:"16px 16px" }}>
@@ -448,9 +455,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                 {/* status */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10, padding:"16px 16px", flexShrink:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span className={`gc-dot ${hasPending?"orange":"grey"}`} />
-                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: hasPending?"#ff8800":"#5a6a88" }}>
-                      {hasPending ? "EN COURS" : "DISPONIBLE"}
+                    <span className={`gc-dot ${isReady?"green":isWaiting?"orange":"grey"}`} />
+                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: statusColor }}>
+                      {statusLabel}
                     </span>
                   </div>
                   <button

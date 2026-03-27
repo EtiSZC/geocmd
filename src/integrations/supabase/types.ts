@@ -154,6 +154,7 @@ export type Database = {
           created_at: string
           history: Json
           id: string
+          notified_ready: boolean
           player_id: string
           scenario: Json
           updated_at: string
@@ -163,6 +164,7 @@ export type Database = {
           created_at?: string
           history?: Json
           id?: string
+          notified_ready?: boolean
           player_id: string
           scenario: Json
           updated_at?: string
@@ -172,6 +174,7 @@ export type Database = {
           created_at?: string
           history?: Json
           id?: string
+          notified_ready?: boolean
           player_id?: string
           scenario?: Json
           updated_at?: string

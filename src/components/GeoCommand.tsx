@@ -1377,6 +1377,13 @@ export default function GeoCommand() {
     setTheaters(updated);
     setActiveIdx(updated.length - 1);
     setScreen("theater");
+    // Fire community notification (non-blocking)
+    const region = scenario?.region;
+    if (region) {
+      supabase.functions.invoke("community-notify", {
+        body: { player_id: player.dbId, region, scenario_title: scenario?.title },
+      }).catch(() => {});
+    }
   }, [player, theaters]);
 
   const handleOpenTheater = (i: number) => { setActiveIdx(i); setScreen("theater"); };

@@ -1118,8 +1118,8 @@ function CommunityScreen({ playerId, onBack }) {
 }
 
 const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
-function getNotifPrefs(): { flash: boolean; theater: boolean } {
-  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false }; } catch { return { flash: true, theater: true }; }
+function getNotifPrefs(): { flash: boolean; theater: boolean; community: boolean } {
+  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false, community: v.community !== false }; } catch { return { flash: true, theater: true, community: true }; }
 }
 function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));

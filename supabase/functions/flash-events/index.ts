@@ -8,40 +8,15 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+// ---- Web Push Encryption (RFC 8291 + VAPID) ----
+
+function urlBase64ToUint8Array(b64: string): Uint8Array {
+  const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+  const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(base64);
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-}
-
-async function importPrivateKey(base64url: string) {
-  const raw = urlBase64ToUint8Array(base64url);
-  return await crypto.subtle.importKey(
-    "pkcs8",
-    await buildPkcs8(raw),
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-}
-
-async function buildPkcs8(rawPrivateKey: Uint8Array): Promise<ArrayBuffer> {
-  // Build PKCS8 wrapper around raw 32-byte EC private key
-  const pkcs8Header = new Uint8Array([
-    0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86,
-    0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,
-    0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02, 0x01, 0x01, 0x04, 0x20,
-  ]);
-  const pkcs8Footer = new Uint8Array([
-    0xa1, 0x44, 0x03, 0x42, 0x00,
-  ]);
-  const result = new Uint8Array(pkcs8Header.length + rawPrivateKey.length + pkcs8Footer.length + 65);
-  result.set(pkcs8Header);
-  result.set(rawPrivateKey, pkcs8Header.length);
-  // We won't include the public key in PKCS8 for signing — use JWK import instead
-  return result.buffer;
 }
 
 function base64urlEncode(data: Uint8Array | ArrayBuffer): string {
@@ -51,129 +26,159 @@ function base64urlEncode(data: Uint8Array | ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function createVapidJwt(endpoint: string, privateKeyBase64url: string, publicKeyBase64url: string): Promise<{ authorization: string; cryptoKey: string }> {
+function concat(...arrays: Uint8Array[]): Uint8Array {
+  const len = arrays.reduce((a, b) => a + b.length, 0);
+  const result = new Uint8Array(len);
+  let offset = 0;
+  for (const arr of arrays) { result.set(arr, offset); offset += arr.length; }
+  return result;
+}
+
+async function hkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, len: number): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey("raw", ikm, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", key, salt.length ? salt : new Uint8Array(32)));
+  const prkKey = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  // T(1) = HMAC(PRK, info || 0x01)
+  const t1 = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, concat(info, new Uint8Array([1]))));
+  return t1.slice(0, len);
+}
+
+// HKDF extract + expand proper implementation
+async function hkdfSha256(ikm: Uint8Array, salt: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  // Extract
+  const saltKey = await crypto.subtle.importKey("raw", salt.length ? salt : new Uint8Array(32), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", saltKey, ikm));
+  // Expand
+  const prkKey = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const infoWithCounter = concat(info, new Uint8Array([1]));
+  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, infoWithCounter));
+  return okm.slice(0, length);
+}
+
+function createInfo(type: string, clientPublicKey: Uint8Array, serverPublicKey: Uint8Array): Uint8Array {
+  const enc = new TextEncoder();
+  const typeBytes = enc.encode(type);
+  const nul = new Uint8Array([0]);
+  // "Content-Encoding: <type>\0" + "P-256\0" + len(recipient) + recipient + len(sender) + sender
+  const header = enc.encode("Content-Encoding: ");
+  const p256 = enc.encode("P-256");
+  const recipientLen = new Uint8Array(2);
+  recipientLen[0] = 0; recipientLen[1] = clientPublicKey.length;
+  const senderLen = new Uint8Array(2);
+  senderLen[0] = 0; senderLen[1] = serverPublicKey.length;
+  return concat(header, typeBytes, nul, p256, nul, recipientLen, clientPublicKey, senderLen, serverPublicKey);
+}
+
+async function encryptPayload(
+  plaintext: Uint8Array,
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
+): Promise<{ encrypted: Uint8Array; localPublicKey: Uint8Array; salt: Uint8Array }> {
+  const clientPublicKeyBytes = urlBase64ToUint8Array(subscription.keys.p256dh);
+  const authSecret = urlBase64ToUint8Array(subscription.keys.auth);
+
+  // Generate local ephemeral ECDH key pair
+  const localKeyPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const localPublicKeyJwk = await crypto.subtle.exportKey("jwk", localKeyPair.publicKey);
+  const localPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", localKeyPair.publicKey));
+
+  // Import client public key for ECDH
+  const clientPublicKey = await crypto.subtle.importKey("raw", clientPublicKeyBytes, { name: "ECDH", namedCurve: "P-256" }, false, []);
+
+  // Derive shared secret via ECDH
+  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: clientPublicKey }, localKeyPair.privateKey, 256));
+
+  // Generate random salt (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // RFC 8291: IKM = HKDF-SHA256(auth_secret, ecdh_secret, "WebPush: info\0" || ua_public || as_public, 32)
+  const ikmInfo = concat(new TextEncoder().encode("WebPush: info\0"), clientPublicKeyBytes, localPublicKeyRaw);
+  const ikm = await hkdfSha256(sharedSecret, authSecret, ikmInfo, 32);
+
+  // Derive content encryption key: HKDF(salt, ikm, "Content-Encoding: aes128gcm\0", 16)
+  const cekInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\0");
+  const cek = await hkdfSha256(ikm, salt, cekInfo, 16);
+
+  // Derive nonce: HKDF(salt, ikm, "Content-Encoding: nonce\0", 12)
+  const nonceInfo = new TextEncoder().encode("Content-Encoding: nonce\0");
+  const nonce = await hkdfSha256(ikm, salt, nonceInfo, 12);
+
+  // Pad plaintext: add delimiter byte 0x02 (final record)
+  const paddedPlaintext = concat(plaintext, new Uint8Array([2]));
+
+  // Encrypt with AES-128-GCM
+  const aesKey = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, aesKey, paddedPlaintext));
+
+  // Build aes128gcm body: salt(16) + rs(4) + idlen(1) + keyid(65) + ciphertext
+  const rs = new Uint8Array(4);
+  const view = new DataView(rs.buffer);
+  view.setUint32(0, 4096);
+  const idLen = new Uint8Array([65]);
+  const body = concat(salt, rs, idLen, localPublicKeyRaw, ciphertext);
+
+  return { encrypted: body, localPublicKey: localPublicKeyRaw, salt };
+}
+
+async function createVapidJwt(endpoint: string, privKeyB64: string, pubKeyB64: string): Promise<{ authorization: string }> {
   const audience = new URL(endpoint).origin;
   const expiry = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
-
   const header = { typ: "JWT", alg: "ES256" };
   const payload = { aud: audience, exp: expiry, sub: "mailto:admin@geocmd.app" };
-
   const headerB64 = base64urlEncode(new TextEncoder().encode(JSON.stringify(header)));
   const payloadB64 = base64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
 
-  // Import private key as JWK
-  const rawKey = urlBase64ToUint8Array(privateKeyBase64url);
-  const jwk = {
-    kty: "EC",
-    crv: "P-256",
-    d: privateKeyBase64url,
-    // We need x and y from public key
-    x: publicKeyBase64url ? "" : "",
-    y: "",
-  };
-
-  // Use raw import approach with PKCS8
-  // Actually, let's decode the public key to get x,y
-  const pubBytes = urlBase64ToUint8Array(publicKeyBase64url);
-  // Uncompressed public key: 0x04 + 32 bytes X + 32 bytes Y
+  const pubBytes = urlBase64ToUint8Array(pubKeyB64);
   const x = base64urlEncode(pubBytes.slice(1, 33));
   const y = base64urlEncode(pubBytes.slice(33, 65));
+  const key = await crypto.subtle.importKey("jwk", { kty: "EC", crv: "P-256", d: privKeyB64, x, y }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(unsignedToken)));
 
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    { kty: "EC", crv: "P-256", d: privateKeyBase64url, x, y },
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    key,
-    new TextEncoder().encode(unsignedToken)
-  );
-
-  // Convert DER signature to raw r||s format for JWT
-  const sigBytes = new Uint8Array(signature);
   let r: Uint8Array, s: Uint8Array;
-  if (sigBytes[0] === 0x30) {
-    // DER encoded
-    const rLen = sigBytes[3];
-    const rStart = 4;
-    const rBytes = sigBytes.slice(rStart, rStart + rLen);
-    const sLen = sigBytes[rStart + rLen + 1];
-    const sStart = rStart + rLen + 2;
-    const sBytes = sigBytes.slice(sStart, sStart + sLen);
+  if (sig[0] === 0x30) {
+    const rLen = sig[3]; const rStart = 4;
+    const rBytes = sig.slice(rStart, rStart + rLen);
+    const sLen = sig[rStart + rLen + 1]; const sStart = rStart + rLen + 2;
+    const sBytes = sig.slice(sStart, sStart + sLen);
     r = rBytes.length > 32 ? rBytes.slice(rBytes.length - 32) : rBytes;
     s = sBytes.length > 32 ? sBytes.slice(sBytes.length - 32) : sBytes;
-    if (r.length < 32) { const padded = new Uint8Array(32); padded.set(r, 32 - r.length); r = padded; }
-    if (s.length < 32) { const padded = new Uint8Array(32); padded.set(s, 32 - s.length); s = padded; }
-  } else {
-    // Already raw r||s (64 bytes)
-    r = sigBytes.slice(0, 32);
-    s = sigBytes.slice(32, 64);
-  }
-
-  const rawSig = new Uint8Array(64);
-  rawSig.set(r, 0);
-  rawSig.set(s, 32);
-
+    if (r.length < 32) { const p = new Uint8Array(32); p.set(r, 32 - r.length); r = p; }
+    if (s.length < 32) { const p = new Uint8Array(32); p.set(s, 32 - s.length); s = p; }
+  } else { r = sig.slice(0, 32); s = sig.slice(32, 64); }
+  const rawSig = new Uint8Array(64); rawSig.set(r, 0); rawSig.set(s, 32);
   const token = `${unsignedToken}.${base64urlEncode(rawSig)}`;
-
-  return {
-    authorization: `vapid t=${token}, k=${publicKeyBase64url}`,
-    cryptoKey: `p256ecdsa=${publicKeyBase64url}`,
-  };
+  return { authorization: `vapid t=${token}, k=${pubKeyB64}` };
 }
 
-async function sendPushNotification(
-  subscription: any,
-  payload: any,
-  privateKey: string,
-  publicKey: string
-): Promise<boolean> {
+async function sendPush(sub: any, payload: any, privKey: string, pubKey: string): Promise<boolean> {
   try {
-    const { authorization, cryptoKey } = await createVapidJwt(
-      subscription.endpoint,
-      privateKey,
-      publicKey
-    );
-
-    const body = JSON.stringify(payload);
-
-    const resp = await fetch(subscription.endpoint, {
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+    const { encrypted } = await encryptPayload(payloadBytes, sub);
+    const { authorization } = await createVapidJwt(sub.endpoint, privKey, pubKey);
+    const resp = await fetch(sub.endpoint, {
       method: "POST",
       headers: {
         Authorization: authorization,
-        "Crypto-Key": cryptoKey,
-        "Content-Type": "application/json",
+        "Content-Encoding": "aes128gcm",
+        "Content-Type": "application/octet-stream",
+        "Content-Length": String(encrypted.length),
         TTL: "86400",
       },
-      body,
+      body: encrypted,
     });
-
-    if (!resp.ok) {
-      console.error("Push failed:", resp.status, await resp.text());
-      return false;
-    }
+    if (!resp.ok) { console.error("Push failed:", resp.status, await resp.text()); return false; }
     return true;
-  } catch (e) {
-    console.error("Push error:", e);
-    return false;
-  }
+  } catch (e) { console.error("Push error:", e); return false; }
 }
 
+// ---- Main handler ----
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
-    const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
-
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -181,7 +186,6 @@ serve(async (req) => {
     const { action, force } = await req.json().catch(() => ({ action: "generate", force: false }));
 
     if (action === "generate") {
-      // Random trigger: 25% chance unless forced
       if (!force && Math.random() > 0.25) {
         return new Response(JSON.stringify({ success: true, skipped: true, reason: "Random roll — no event this time" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -192,32 +196,19 @@ serve(async (req) => {
 
       const aiResp = await fetch(AI_URL, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            {
-              role: "system",
-              content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste basée sur l'actualité de mars 2026.`,
-            },
-            {
-              role: "user",
-              content: `Génère un événement flash géopolitique urgent. La crise doit être surprenante mais plausible.
+            { role: "system", content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste basée sur l'actualité de mars 2026.` },
+            { role: "user", content: `Génère un événement flash géopolitique urgent. La crise doit être surprenante mais plausible.
 JSON: {"title":"Titre court","description":"Description en 2-3 phrases.","region":"Zone géographique","event_type":"militaire|diplomatique|économique|humanitaire","urgency":4,"options":[{"id":"opt1","label":"Action rapide 1","desc":"Description","cat":"militaire|diplomatique|économique|renseignement","risk":"faible|modéré|élevé","scoreDeltas":{"stability":3,"diplomacy":-2,"military":5,"intelligence":0}},{"id":"opt2","label":"Action rapide 2","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}},{"id":"opt3","label":"Action rapide 3","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}}]}
-Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.`,
-            },
+Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.` },
           ],
         }),
       });
 
-      if (!aiResp.ok) {
-        const errText = await aiResp.text();
-        console.error("AI error:", aiResp.status, errText);
-        throw new Error(`AI error ${aiResp.status}`);
-      }
+      if (!aiResp.ok) { const errText = await aiResp.text(); console.error("AI error:", aiResp.status, errText); throw new Error(`AI error ${aiResp.status}`); }
 
       const aiData = await aiResp.json();
       const raw = aiData.choices?.[0]?.message?.content || "";
@@ -227,11 +218,8 @@ Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.`,
         parsed = JSON.parse(m ? m[1] : raw);
       } catch {
         parsed = {
-          title: "Incident diplomatique majeur",
-          description: "Un incident diplomatique inattendu secoue les relations internationales.",
-          region: "Global",
-          event_type: "diplomatique",
-          urgency: 4,
+          title: "Incident diplomatique majeur", description: "Un incident diplomatique inattendu secoue les relations internationales.",
+          region: "Global", event_type: "diplomatique", urgency: 4,
           options: [
             { id: "opt1", label: "Médiation immédiate", desc: "Lancer une médiation d'urgence.", cat: "diplomatique", risk: "faible", scoreDeltas: { stability: 3, diplomacy: 5, military: 0, intelligence: -1 } },
             { id: "opt2", label: "Posture défensive", desc: "Renforcer la posture de défense.", cat: "militaire", risk: "modéré", scoreDeltas: { stability: -2, diplomacy: -3, military: 6, intelligence: 2 } },
@@ -240,55 +228,29 @@ Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.`,
         };
       }
 
-      // Expires in 2 hours
       const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-
       const { data: flashEvent, error: insertErr } = await sb.from("flash_events").insert({
-        title: parsed.title,
-        description: parsed.description,
-        region: parsed.region,
-        event_type: parsed.event_type,
-        urgency: parsed.urgency || 4,
-        options: parsed.options || [],
-        expires_at: expiresAt,
+        title: parsed.title, description: parsed.description, region: parsed.region,
+        event_type: parsed.event_type, urgency: parsed.urgency || 4, options: parsed.options || [], expires_at: expiresAt,
       }).select().single();
 
-      if (insertErr) {
-        console.error("Insert error:", insertErr);
-        throw insertErr;
-      }
+      if (insertErr) { console.error("Insert error:", insertErr); throw insertErr; }
 
-      // Send push notifications to all subscribers
+      // Push notifications with proper encryption
       if (VAPID_PRIVATE_KEY) {
         const { data: subs } = await sb.from("push_subscriptions").select("subscription, notify_flash").eq("notify_flash", true);
         if (subs && subs.length > 0) {
-          const payload = {
-            title: `⚡ ${parsed.title}`,
-            body: parsed.description?.slice(0, 120) || "Événement flash en cours !",
-            url: "/",
-          };
-          await Promise.allSettled(
-            subs.map((s: any) =>
-              sendPushNotification(s.subscription, payload, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY)
-            )
-          );
+          const pushPayload = { title: `⚡ ${parsed.title}`, body: parsed.description?.slice(0, 120) || "Événement flash en cours !", url: "/" };
+          await Promise.allSettled(subs.map((s: any) => sendPush(s.subscription, pushPayload, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY)));
         }
       }
 
-      return new Response(JSON.stringify({ success: true, data: flashEvent }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ success: true, data: flashEvent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("flash-events error:", e);
-    return new Response(
-      JSON.stringify({ success: false, error: e instanceof Error ? e.message : "Unknown" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: false, error: e instanceof Error ? e.message : "Unknown" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -363,8 +363,13 @@ function Header({ player, theaters, onProfile }) {
         {theaters.length > 0 && (
           <>
             {readyCount > 0 && (
+              <span className="gc-notif-badge" title={`${readyCount} théâtre${readyCount>1?"s":""} avec résultats non consultés`}>
+                {readyCount}
+              </span>
+            )}
+            {readyCount > 0 && (
               <span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:1.5 }}>
-                {readyCount} PRÊT{readyCount>1?"S":""}
+                PRÊT{readyCount>1?"S":""}
               </span>
             )}
             {waitingCount > 0 && (

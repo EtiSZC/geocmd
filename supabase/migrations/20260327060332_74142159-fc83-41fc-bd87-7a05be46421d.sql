@@ -1,0 +1,1 @@
+ALTER TABLE public.theaters ADD COLUMN notified_ready boolean NOT NULL DEFAULT false;

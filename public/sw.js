@@ -1,17 +1,19 @@
 // GeoCommand Service Worker — Push notifications
 
 self.addEventListener("push", (event) => {
-  let data = { title: "⚡ CRISE GÉOPOLITIQUE", body: "Un événement flash requiert votre attention.", url: "/" };
+  let data = { title: "⚡ CRISE GÉOPOLITIQUE", body: "Un événement requiert votre attention.", url: "/" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {}
+
+  const tag = data.tag || "geocmd-event";
 
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "/pwa-192x192.png",
       badge: "/pwa-192x192.png",
-      tag: "geocmd-flash",
+      tag,
       renotify: true,
       vibrate: [200, 100, 200],
       data: { url: data.url || "/" },

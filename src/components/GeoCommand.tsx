@@ -258,7 +258,7 @@ async function insertTheater(playerId: string, scenario: any) {
   return data;
 }
 
-async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any }) {
+async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any; notified_ready?: boolean }) {
   await supabase.from("theaters").update(updates).eq("id", theaterId);
 }
 

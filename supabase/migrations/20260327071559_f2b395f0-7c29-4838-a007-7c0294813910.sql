@@ -1,0 +1,1 @@
+ALTER TABLE public.push_subscriptions ADD COLUMN notify_community boolean NOT NULL DEFAULT true;

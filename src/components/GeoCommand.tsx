@@ -1118,8 +1118,8 @@ function CommunityScreen({ playerId, onBack }) {
 }
 
 const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
-function getNotifPrefs(): { flash: boolean; theater: boolean } {
-  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false }; } catch { return { flash: true, theater: true }; }
+function getNotifPrefs(): { flash: boolean; theater: boolean; community: boolean } {
+  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false, community: v.community !== false }; } catch { return { flash: true, theater: true, community: true }; }
 }
 function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
@@ -1128,16 +1128,16 @@ function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
 function SettingsScreen({ playerId, onBack }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
-  const toggle = async (key: "flash" | "theater") => {
+  const toggle = async (key: "flash" | "theater" | "community") => {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     saveNotifPrefs(next);
-    // Sync to DB
     if (playerId) {
       setSaving(true);
       await supabase.from("push_subscriptions").update({
         notify_flash: next.flash,
         notify_theater: next.theater,
+        notify_community: next.community,
       }).eq("player_id", playerId);
       setSaving(false);
     }
@@ -1151,6 +1151,7 @@ function SettingsScreen({ playerId, onBack }) {
       {[
         { key: "flash" as const, label: "ÉVÉNEMENTS FLASH", desc: "Alertes push lors de nouvelles crises éclair (probabilité 25%/heure)." },
         { key: "theater" as const, label: "THÉÂTRES — STATUT PRÊT", desc: "Notification push lorsqu'un théâtre est prêt après 5 heures d'attente." },
+        { key: "community" as const, label: "ALERTES COMMUNAUTAIRES", desc: "Notification quand un autre opérateur rejoint un théâtre dans la même région que l'un des vôtres." },
       ].map(item => (
         <div key={item.key} className="gc-panel" style={{ padding:18, marginBottom:14 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -1376,6 +1377,13 @@ export default function GeoCommand() {
     setTheaters(updated);
     setActiveIdx(updated.length - 1);
     setScreen("theater");
+    // Fire community notification (non-blocking)
+    const region = scenario?.region;
+    if (region) {
+      supabase.functions.invoke("community-notify", {
+        body: { player_id: player.dbId, region, scenario_title: scenario?.title },
+      }).catch(() => {});
+    }
   }, [player, theaters]);
 
   const handleOpenTheater = (i: number) => { setActiveIdx(i); setScreen("theater"); };

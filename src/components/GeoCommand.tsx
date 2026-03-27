@@ -132,6 +132,7 @@ function injectStyles() {
     .gc-badge.ts { border-color:var(--red); color:var(--red); }
     .gc-badge.c  { border-color:var(--gold); color:var(--gold); }
     .gc-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 7px var(--green); animation:blink 2.2s ease-in-out infinite; }
+    .gc-dot.green  { background:#00e87a; box-shadow:0 0 7px #00e87a; }
     .gc-dot.orange { background:#ff8800; box-shadow:0 0 7px #ff8800; }
     .gc-dot.grey   { background:var(--muted2); box-shadow:none; animation:none; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }

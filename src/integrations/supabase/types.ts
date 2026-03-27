@@ -123,18 +123,24 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          notify_flash: boolean
+          notify_theater: boolean
           player_id: string
           subscription: Json
         }
         Insert: {
           created_at?: string
           id?: string
+          notify_flash?: boolean
+          notify_theater?: boolean
           player_id: string
           subscription: Json
         }
         Update: {
           created_at?: string
           id?: string
+          notify_flash?: boolean
+          notify_theater?: boolean
           player_id?: string
           subscription?: Json
         }

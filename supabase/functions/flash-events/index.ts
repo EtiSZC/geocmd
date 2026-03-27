@@ -260,7 +260,7 @@ Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.`,
 
       // Send push notifications to all subscribers
       if (VAPID_PRIVATE_KEY) {
-        const { data: subs } = await sb.from("push_subscriptions").select("subscription");
+        const { data: subs } = await sb.from("push_subscriptions").select("subscription, notify_flash").eq("notify_flash", true);
         if (subs && subs.length > 0) {
           const payload = {
             title: `⚡ ${parsed.title}`,

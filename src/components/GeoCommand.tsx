@@ -980,7 +980,7 @@ function ScorePanel({ score, compact = false }) {
   );
 }
 
-function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
+function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSettings }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);
@@ -1037,6 +1037,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
         ))
       )}
       <div className="gc-div"/>
+      <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onSettings}>▸ PARAMÈTRES NOTIFICATIONS</button>
       <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onCommunity}>▸ OPÉRATEURS EN LIGNE</button>
       {!confirming ? (
         <button className="gc-btn danger" onClick={() => setConfirming(true)}>
@@ -1112,6 +1113,75 @@ function CommunityScreen({ playerId, onBack }) {
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
+function getNotifPrefs(): { flash: boolean; theater: boolean } {
+  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false }; } catch { return { flash: true, theater: true }; }
+}
+function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
+  localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+}
+
+function SettingsScreen({ playerId, onBack }) {
+  const [prefs, setPrefs] = useState(getNotifPrefs);
+  const [saving, setSaving] = useState(false);
+  const toggle = async (key: "flash" | "theater") => {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    saveNotifPrefs(next);
+    // Sync to DB
+    if (playerId) {
+      setSaving(true);
+      await supabase.from("push_subscriptions").update({
+        notify_flash: next.flash,
+        notify_theater: next.theater,
+      }).eq("player_id", playerId);
+      setSaving(false);
+    }
+  };
+  return (
+    <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
+      <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+      <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>CONFIGURATION</div>
+      <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:24 }}>NOTIFICATIONS</h2>
+
+      {[
+        { key: "flash" as const, label: "ÉVÉNEMENTS FLASH", desc: "Alertes push lors de nouvelles crises éclair (probabilité 25%/heure)." },
+        { key: "theater" as const, label: "THÉÂTRES — STATUT PRÊT", desc: "Notification push lorsqu'un théâtre est prêt après 5 heures d'attente." },
+      ].map(item => (
+        <div key={item.key} className="gc-panel" style={{ padding:18, marginBottom:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <span className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2 }}>{item.label}</span>
+            <button
+              onClick={() => toggle(item.key)}
+              disabled={saving}
+              style={{
+                width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
+                background: prefs[item.key] ? "#00e87a" : "#2e3e56",
+                position:"relative", transition:"background .2s",
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              <div style={{
+                width:20, height:20, borderRadius:10, background:"#fff",
+                position:"absolute", top:3,
+                left: prefs[item.key] ? 25 : 3,
+                transition:"left .2s",
+              }}/>
+            </button>
+          </div>
+          <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:0 }}>{item.desc}</p>
+        </div>
+      ))}
+
+      <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
+        <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>
+          ℹ Les notifications push nécessitent l'autorisation du navigateur. Si vous désactivez un type ci-dessus, les notifications correspondantes ne seront plus envoyées à ce terminal.
+        </p>
+      </div>
     </div>
   );
 }
@@ -1400,7 +1470,10 @@ export default function GeoCommand() {
           <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="profile"&&(
-          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")}/>
+          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>
+        )}
+        {screen==="settings"&&(
+          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")}/>
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>

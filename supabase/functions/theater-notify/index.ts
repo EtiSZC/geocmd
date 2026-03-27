@@ -170,8 +170,9 @@ serve(async (req) => {
     // Get push subscriptions for those players
     const { data: subs } = await sb
       .from("push_subscriptions")
-      .select("player_id, subscription")
-      .in("player_id", playerIds);
+      .select("player_id, subscription, notify_theater")
+      .in("player_id", playerIds)
+      .eq("notify_theater", true);
 
     const subsByPlayer = new Map<string, any>();
     (subs || []).forEach((s: any) => subsByPlayer.set(s.player_id, s.subscription));

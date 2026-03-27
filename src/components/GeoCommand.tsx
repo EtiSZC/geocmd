@@ -980,7 +980,7 @@ function ScorePanel({ score, compact = false }) {
   );
 }
 
-function ProfileScreen({ player, theaters, onBack, onReset, onCommunity }) {
+function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSettings }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);

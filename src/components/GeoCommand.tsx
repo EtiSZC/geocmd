@@ -135,6 +135,17 @@ function injectStyles() {
     .gc-dot.green  { background:#00e87a; box-shadow:0 0 7px #00e87a; }
     .gc-dot.orange { background:#ff8800; box-shadow:0 0 7px #ff8800; }
     .gc-dot.grey   { background:var(--muted2); box-shadow:none; animation:none; }
+    .gc-notif-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:20px; height:20px; border-radius:10px; padding:0 6px;
+      background:#00e87a; color:#060810; font-family:'Share Tech Mono',monospace;
+      font-size:10px; font-weight:700; letter-spacing:1px;
+      animation:pulse-badge 2s ease-in-out infinite;
+      box-shadow:0 0 12px rgba(0,232,122,0.5);
+    }
+    @keyframes pulse-badge { 0%,100%{box-shadow:0 0 8px rgba(0,232,122,0.4)} 50%{box-shadow:0 0 18px rgba(0,232,122,0.7)} }
+    .gc-ready-card { border-color:rgba(0,232,122,0.3) !important; background:rgba(0,232,122,0.03) !important; }
+    .gc-ready-card:hover { border-color:rgba(0,232,122,0.5) !important; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
     .gc-theater {
       background:var(--surf); border:1px solid var(--brd); padding:18px 20px;
@@ -352,8 +363,13 @@ function Header({ player, theaters, onProfile }) {
         {theaters.length > 0 && (
           <>
             {readyCount > 0 && (
+              <span className="gc-notif-badge" title={`${readyCount} théâtre${readyCount>1?"s":""} avec résultats non consultés`}>
+                {readyCount}
+              </span>
+            )}
+            {readyCount > 0 && (
               <span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:1.5 }}>
-                {readyCount} PRÊT{readyCount>1?"S":""}
+                PRÊT{readyCount>1?"S":""}
               </span>
             )}
             {waitingCount > 0 && (
@@ -451,6 +467,7 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
             return (
               <div
                 key={t.scenario.id}
+                className={isReady ? "gc-ready-card" : ""}
                 onClick={() => onOpenTheater(i)}
                 style={{
                   display:"flex", alignItems:"center", gap:0,
@@ -458,8 +475,8 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
+                onMouseEnter={e => { if(!isReady){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
+                onMouseLeave={e => { if(!isReady){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
               >
                 {/* accent bar */}
                 <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />
@@ -472,6 +489,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>
                     {t.scenario.playerRole} — {t.scenario.playerCountry}
                   </div>
+                  {isReady && (
+                    <div className="gc-m" style={{ fontSize:9, color:"#00e87a", letterSpacing:1.5, marginTop:6 }}>
+                      ◈ EFFETS DISPONIBLES — CONSULTATION REQUISE
+                    </div>
+                  )}
                 </div>
 
                 {/* status */}

@@ -349,9 +349,23 @@ function Header({ player, theaters, onProfile }) {
         </span>
         <span className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>◈ {total}</span>
         {theaters.length > 0 && (
-          <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
-            {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
-          </span>
+          <>
+            {readyCount > 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:1.5 }}>
+                {readyCount} PRÊT{readyCount>1?"S":""}
+              </span>
+            )}
+            {waitingCount > 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:1.5 }}>
+                {waitingCount} EN ATTENTE
+              </span>
+            )}
+            {readyCount === 0 && waitingCount === 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:1.5 }}>
+                {theaters.length} THÉÂTRE{theaters.length>1?"S":""}
+              </span>
+            )}
+          </>
         )}
       </div>
       {player && (

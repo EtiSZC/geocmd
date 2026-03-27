@@ -1151,6 +1151,7 @@ function SettingsScreen({ playerId, onBack }) {
       {[
         { key: "flash" as const, label: "ÉVÉNEMENTS FLASH", desc: "Alertes push lors de nouvelles crises éclair (probabilité 25%/heure)." },
         { key: "theater" as const, label: "THÉÂTRES — STATUT PRÊT", desc: "Notification push lorsqu'un théâtre est prêt après 5 heures d'attente." },
+        { key: "community" as const, label: "ALERTES COMMUNAUTAIRES", desc: "Notification quand un autre opérateur rejoint un théâtre dans la même région que l'un des vôtres." },
       ].map(item => (
         <div key={item.key} className="gc-panel" style={{ padding:18, marginBottom:14 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>

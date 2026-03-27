@@ -132,6 +132,7 @@ function injectStyles() {
     .gc-badge.ts { border-color:var(--red); color:var(--red); }
     .gc-badge.c  { border-color:var(--gold); color:var(--gold); }
     .gc-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 7px var(--green); animation:blink 2.2s ease-in-out infinite; }
+    .gc-dot.green  { background:#00e87a; box-shadow:0 0 7px #00e87a; }
     .gc-dot.orange { background:#ff8800; box-shadow:0 0 7px #ff8800; }
     .gc-dot.grey   { background:var(--muted2); box-shadow:none; animation:none; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
@@ -328,9 +329,16 @@ function TerminalLoader({ messages=[] }) {
 }
 
 function Header({ player, theaters, onProfile }) {
+  const DELAY_MS = 5 * 60 * 60 * 1000;
+  const waitingCount = theaters.filter(t => {
+    const last = t.history[t.history.length - 1];
+    const decidedAt = last?.decided_at ? new Date(last.decided_at).getTime() : 0;
+    return !!(last?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) < DELAY_MS);
+  }).length;
   const readyCount = theaters.filter(t => {
     const last = t.history[t.history.length - 1];
-    return !last?.decided_at || !!t.consequence;
+    const decidedAt = last?.decided_at ? new Date(last.decided_at).getTime() : 0;
+    return !!(last?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) >= DELAY_MS);
   }).length;
   const score = player?.influence_score || DEFAULT_SCORE;
   const total = totalScore(score);
@@ -342,9 +350,23 @@ function Header({ player, theaters, onProfile }) {
         </span>
         <span className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>◈ {total}</span>
         {theaters.length > 0 && (
-          <span className="gc-m" style={{ fontSize:10, color: readyCount < theaters.length ? "#ff8800" : "#5a6a88", letterSpacing:1.5 }}>
-            {readyCount < theaters.length ? `${theaters.length - readyCount} EN ATTENTE` : `${theaters.length} THÉÂTRE${theaters.length>1?"S":""}`}
-          </span>
+          <>
+            {readyCount > 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#00e87a", letterSpacing:1.5 }}>
+                {readyCount} PRÊT{readyCount>1?"S":""}
+              </span>
+            )}
+            {waitingCount > 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#ff8800", letterSpacing:1.5 }}>
+                {waitingCount} EN ATTENTE
+              </span>
+            )}
+            {readyCount === 0 && waitingCount === 0 && (
+              <span className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:1.5 }}>
+                {theaters.length} THÉÂTRE{theaters.length>1?"S":""}
+              </span>
+            )}
+          </>
         )}
       </div>
       {player && (
@@ -417,8 +439,15 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
         <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:24 }}>
           {theaters.map((t, i) => {
             const lastH = t.history[t.history.length - 1];
-            const hasPending = !!(lastH?.decided_at && !t.consequence);
+            const DELAY_MS = 5 * 60 * 60 * 1000;
+            const decidedAt = lastH?.decided_at ? new Date(lastH.decided_at).getTime() : 0;
+            const isWaiting = !!(lastH?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) < DELAY_MS);
+            const isReady = !!(lastH?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) >= DELAY_MS);
+            const isAvailable = !lastH?.decided_at || !!t.consequence;
             const uc = urgencyColor(t.scenario.urgency || 3);
+            const statusColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : "#5a6a88";
+            const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "DISPONIBLE";
+            const barColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : uc;
             return (
               <div
                 key={t.scenario.id}
@@ -429,11 +458,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = hasPending?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
               >
                 {/* accent bar */}
-                <div style={{ width:3, alignSelf:"stretch", background: hasPending?"#ff8800":uc, flexShrink:0 }} />
+                <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />
 
                 {/* content */}
                 <div style={{ flex:1, padding:"16px 16px" }}>
@@ -448,9 +477,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                 {/* status */}
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10, padding:"16px 16px", flexShrink:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span className={`gc-dot ${hasPending?"orange":"grey"}`} />
-                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: hasPending?"#ff8800":"#5a6a88" }}>
-                      {hasPending ? "EN COURS" : "DISPONIBLE"}
+                    <span className={`gc-dot ${isReady?"green":isWaiting?"orange":"grey"}`} />
+                    <span className="gc-m" style={{ fontSize:9, letterSpacing:1.5, color: statusColor }}>
+                      {statusLabel}
                     </span>
                   </div>
                   <button

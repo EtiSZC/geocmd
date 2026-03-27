@@ -123,6 +123,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          notify_community: boolean
           notify_flash: boolean
           notify_theater: boolean
           player_id: string
@@ -131,6 +132,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          notify_community?: boolean
           notify_flash?: boolean
           notify_theater?: boolean
           player_id: string
@@ -139,6 +141,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          notify_community?: boolean
           notify_flash?: boolean
           notify_theater?: boolean
           player_id?: string

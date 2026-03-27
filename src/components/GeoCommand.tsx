@@ -467,6 +467,7 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
             return (
               <div
                 key={t.scenario.id}
+                className={isReady ? "gc-ready-card" : ""}
                 onClick={() => onOpenTheater(i)}
                 style={{
                   display:"flex", alignItems:"center", gap:0,
@@ -474,8 +475,8 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   cursor:"pointer", position:"relative", overflow:"hidden",
                   transition:"border-color .15s, background .15s",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)"; }}
+                onMouseEnter={e => { if(!isReady){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
+                onMouseLeave={e => { if(!isReady){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
               >
                 {/* accent bar */}
                 <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />
@@ -488,6 +489,11 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>
                     {t.scenario.playerRole} — {t.scenario.playerCountry}
                   </div>
+                  {isReady && (
+                    <div className="gc-m" style={{ fontSize:9, color:"#00e87a", letterSpacing:1.5, marginTop:6 }}>
+                      ◈ EFFETS DISPONIBLES — CONSULTATION REQUISE
+                    </div>
+                  )}
                 </div>
 
                 {/* status */}

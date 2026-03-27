@@ -328,9 +328,16 @@ function TerminalLoader({ messages=[] }) {
 }
 
 function Header({ player, theaters, onProfile }) {
+  const DELAY_MS = 5 * 60 * 60 * 1000;
+  const waitingCount = theaters.filter(t => {
+    const last = t.history[t.history.length - 1];
+    const decidedAt = last?.decided_at ? new Date(last.decided_at).getTime() : 0;
+    return !!(last?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) < DELAY_MS);
+  }).length;
   const readyCount = theaters.filter(t => {
     const last = t.history[t.history.length - 1];
-    return !last?.decided_at || !!t.consequence;
+    const decidedAt = last?.decided_at ? new Date(last.decided_at).getTime() : 0;
+    return !!(last?.decided_at && !t.consequence && decidedAt && (Date.now() - decidedAt) >= DELAY_MS);
   }).length;
   const score = player?.influence_score || DEFAULT_SCORE;
   const total = totalScore(score);

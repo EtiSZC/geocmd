@@ -1125,12 +1125,22 @@ function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
 
-function SettingsScreen({ onBack }) {
+function SettingsScreen({ playerId, onBack }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
-  const toggle = (key: "flash" | "theater") => {
+  const [saving, setSaving] = useState(false);
+  const toggle = async (key: "flash" | "theater") => {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     saveNotifPrefs(next);
+    // Sync to DB
+    if (playerId) {
+      setSaving(true);
+      await supabase.from("push_subscriptions").update({
+        notify_flash: next.flash,
+        notify_theater: next.theater,
+      }).eq("player_id", playerId);
+      setSaving(false);
+    }
   };
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
@@ -1147,10 +1157,12 @@ function SettingsScreen({ onBack }) {
             <span className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2 }}>{item.label}</span>
             <button
               onClick={() => toggle(item.key)}
+              disabled={saving}
               style={{
                 width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
                 background: prefs[item.key] ? "#00e87a" : "#2e3e56",
                 position:"relative", transition:"background .2s",
+                opacity: saving ? 0.6 : 1,
               }}
             >
               <div style={{

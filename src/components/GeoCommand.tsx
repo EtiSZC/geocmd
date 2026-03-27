@@ -462,7 +462,7 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
             const isAvailable = !lastH?.decided_at || !!t.consequence;
             const uc = urgencyColor(t.scenario.urgency || 3);
             const statusColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : "#5a6a88";
-            const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "DISPONIBLE";
+            const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "EN ATTENTE";
             const barColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : uc;
             return (
               <div

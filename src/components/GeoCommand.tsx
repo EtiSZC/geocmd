@@ -1473,7 +1473,7 @@ export default function GeoCommand() {
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>
         )}
         {screen==="settings"&&(
-          <SettingsScreen onBack={()=>setScreen("profile")}/>
+          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")}/>
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>

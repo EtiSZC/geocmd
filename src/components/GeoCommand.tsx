@@ -1332,7 +1332,7 @@ export default function GeoCommand() {
         } else {
           const today = fmtDate();
           const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];
-          if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: null });
+          if (t.dbId) updateTheater(t.dbId, { history: newHistory, consequence: null, notified_ready: false });
           return { ...t, history: newHistory, consequence: null };
         }
       });

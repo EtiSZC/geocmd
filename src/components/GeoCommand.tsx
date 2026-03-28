@@ -1174,6 +1174,34 @@ function CommunityScreen({ playerId, onBack }) {
   );
 }
 
+function TestPushButton({ playerId }: { playerId: string | null }) {
+  const [status, setStatus] = useState<"idle"|"sending"|"success"|"error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const send = async () => {
+    if (!playerId) return;
+    setStatus("sending"); setErrorMsg("");
+    try {
+      const { data, error } = await supabase.functions.invoke("test-push", { body: { player_id: playerId } });
+      if (error || !data?.success) { setStatus("error"); setErrorMsg(data?.error || error?.message || "Erreur inconnue"); }
+      else setStatus("success");
+    } catch (e: any) { setStatus("error"); setErrorMsg(e.message); }
+    setTimeout(() => setStatus("idle"), 4000);
+  };
+  return (
+    <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
+      <div className="gc-m" style={{ fontSize:11, color:"#4d8eff", letterSpacing:2, marginBottom:8 }}>TEST DES NOTIFICATIONS</div>
+      <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:"0 0 12px 0" }}>
+        Envoyez une notification test pour vérifier que le titre, l'icône et le contenu s'affichent correctement.
+      </p>
+      <button className="gc-btn" onClick={send} disabled={status === "sending" || !playerId}
+        style={{ background: status === "success" ? "#00e87a" : status === "error" ? "#ff3344" : "#4d8eff", color:"#fff", border:"none", padding:"10px 20px", fontSize:12, letterSpacing:2, cursor:"pointer", width:"100%" }}>
+        {status === "sending" ? "ENVOI…" : status === "success" ? "✓ ENVOYÉE" : status === "error" ? "✕ ÉCHEC" : "🔔 ENVOYER UNE NOTIFICATION TEST"}
+      </button>
+      {status === "error" && errorMsg && <p style={{ fontSize:11, color:"#ff3344", marginTop:8 }}>{errorMsg}</p>}
+    </div>
+  );
+}
+
 const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
 function getNotifPrefs(): { flash: boolean; theater: boolean; community: boolean } {
   try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false, community: v.community !== false }; } catch { return { flash: true, theater: true, community: true }; }
@@ -1234,6 +1262,8 @@ function SettingsScreen({ playerId, onBack }) {
           <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:0 }}>{item.desc}</p>
         </div>
       ))}
+
+      <TestPushButton playerId={playerId} />
 
       <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
         <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>

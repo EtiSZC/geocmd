@@ -1478,10 +1478,15 @@ export default function GeoCommand() {
 
   const handleOpenTheater = (i: number) => { setActiveIdx(i); setScreen("theater"); };
 
-  const handleDropTheater = useCallback(async (i: number) => {
+  const handleDropTheater = useCallback(async (i: number, animate = false) => {
     const t = theaters[i];
     if (t?.dbId) await deleteTheater(t.dbId);
-    setTheaters(prev => prev.filter((_, idx) => idx !== i));
+    if (animate) {
+      // Will be picked up by HubScreen removingIdx after screen transition
+      setPendingRemoveIdx(i);
+    } else {
+      setTheaters(prev => prev.filter((_, idx) => idx !== i));
+    }
   }, [theaters]);
 
   const handleDecisionMade = useCallback((index: number, action: any, consequence: any) => {

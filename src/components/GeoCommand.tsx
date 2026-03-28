@@ -428,10 +428,21 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater }) {
+function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater, pendingRemoveIdx = null, onRemoveComplete = null }) {
   const today = fmtDate();
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
   const [removingIdx, setRemovingIdx] = useState<number|null>(null);
+
+  useEffect(() => {
+    if (pendingRemoveIdx !== null && removingIdx === null) {
+      setRemovingIdx(pendingRemoveIdx);
+      const timer = setTimeout(() => {
+        if (onRemoveComplete) onRemoveComplete(pendingRemoveIdx);
+        setRemovingIdx(null);
+      }, 450);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingRemoveIdx]);
 
   return (
     <div style={{ padding:"24px 20px", maxWidth:480, margin:"0 auto" }} className="gc-fade">

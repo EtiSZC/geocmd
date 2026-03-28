@@ -477,15 +477,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   transition:"opacity .4s ease, transform .4s ease, max-height .4s ease, margin .4s ease, padding .4s ease, border-width .4s ease",
                   ...(isRemoving ? { opacity:0, transform:"translateX(-100%)", maxHeight:0, marginBottom:0, borderWidth:0 } : { opacity:1, transform:"translateX(0)", maxHeight:200 }),
                 }}
-                onClick={() => onOpenTheater(i)}
-                style={{
-                  display:"flex", alignItems:"center", gap:0,
-                  background:"var(--surf)", border:"1px solid var(--brd)",
-                  cursor:"pointer", position:"relative", overflow:"hidden",
-                  transition:"border-color .15s, background .15s",
-                }}
-                onMouseEnter={e => { if(!isReady){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
-                onMouseLeave={e => { if(!isReady){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
+                onClick={() => !isRemoving && onOpenTheater(i)}
+                onMouseEnter={e => { if(!isReady && !isRemoving){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
+                onMouseLeave={e => { if(!isReady && !isRemoving){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
               >
                 {/* accent bar */}
                 <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />

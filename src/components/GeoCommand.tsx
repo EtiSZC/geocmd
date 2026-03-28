@@ -465,10 +465,18 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
             const statusColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : "#5a6a88";
             const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "EN ATTENTE";
             const barColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : uc;
+            const isRemoving = removingIdx === i;
             return (
               <div
                 key={t.scenario.id}
                 className={isReady ? "gc-ready-card" : ""}
+                style={{
+                  display:"flex", alignItems:"center", gap:0,
+                  background:"var(--surf)", border:"1px solid var(--brd)",
+                  cursor:"pointer", position:"relative", overflow:"hidden",
+                  transition:"opacity .4s ease, transform .4s ease, max-height .4s ease, margin .4s ease, padding .4s ease, border-width .4s ease",
+                  ...(isRemoving ? { opacity:0, transform:"translateX(-100%)", maxHeight:0, marginBottom:0, borderWidth:0 } : { opacity:1, transform:"translateX(0)", maxHeight:200 }),
+                }}
                 onClick={() => onOpenTheater(i)}
                 style={{
                   display:"flex", alignItems:"center", gap:0,

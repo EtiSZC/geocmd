@@ -1565,7 +1565,9 @@ export default function GeoCommand() {
           <HubScreen player={player} theaters={theaters}
             onOpenTheater={handleOpenTheater}
             onAddTheater={()=>setScreen("scenario-select")}
-            onDropTheater={handleDropTheater}/>
+            onDropTheater={handleDropTheater}
+            pendingRemoveIdx={pendingRemoveIdx}
+            onRemoveComplete={(i: number) => { setPendingRemoveIdx(null); setTheaters(prev => prev.filter((_, idx) => idx !== i)); }}/>
         )}
         {screen==="scenario-select"&&(
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>

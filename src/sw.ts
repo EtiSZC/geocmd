@@ -22,16 +22,18 @@ self.addEventListener("push", (event) => {
 
   const tag = (data as any).tag || "geocmd-event";
 
+  const options: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
+    body: data.body,
+    icon: "/pwa-192x192.png",
+    badge: "/pwa-192x192.png",
+    tag,
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data: { url: data.url || "/" },
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/pwa-192x192.png",
-      badge: "/pwa-192x192.png",
-      tag,
-      renotify: true,
-      vibrate: [200, 100, 200],
-      data: { url: data.url || "/" },
-    })
+    self.registration.showNotification(data.title, options as NotificationOptions)
   );
 });
 

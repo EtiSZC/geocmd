@@ -16,27 +16,33 @@ export type Database = {
     Tables: {
       flash_event_responses: {
         Row: {
+          actual_deltas: Json | null
           chosen_option: Json
           event_id: string
           id: string
           player_id: string
           responded_at: string
+          risk_outcome: string | null
           score_deltas: Json | null
         }
         Insert: {
+          actual_deltas?: Json | null
           chosen_option: Json
           event_id: string
           id?: string
           player_id: string
           responded_at?: string
+          risk_outcome?: string | null
           score_deltas?: Json | null
         }
         Update: {
+          actual_deltas?: Json | null
           chosen_option?: Json
           event_id?: string
           id?: string
           player_id?: string
           responded_at?: string
+          risk_outcome?: string | null
           score_deltas?: Json | null
         }
         Relationships: [
@@ -64,7 +70,10 @@ export type Database = {
           expires_at: string
           id: string
           options: Json
+          parent_event_id: string | null
+          parent_option_id: string | null
           region: string
+          target_player_id: string | null
           title: string
           urgency: number
         }
@@ -75,7 +84,10 @@ export type Database = {
           expires_at: string
           id?: string
           options?: Json
+          parent_event_id?: string | null
+          parent_option_id?: string | null
           region: string
+          target_player_id?: string | null
           title: string
           urgency?: number
         }
@@ -86,11 +98,29 @@ export type Database = {
           expires_at?: string
           id?: string
           options?: Json
+          parent_event_id?: string | null
+          parent_option_id?: string | null
           region?: string
+          target_player_id?: string | null
           title?: string
           urgency?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "flash_events_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "flash_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_events_target_player_id_fkey"
+            columns: ["target_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       players: {
         Row: {

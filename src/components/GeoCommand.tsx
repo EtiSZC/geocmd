@@ -36,13 +36,15 @@ async function subscribeToPush(playerId: string) {
   }
 }
 
-async function loadActiveFlashEvents() {
+async function loadActiveFlashEvents(playerId?: string) {
+  // Load global events (no target) + events targeted at this player
   const { data } = await supabase
     .from("flash_events")
     .select("*")
     .gt("expires_at", new Date().toISOString())
+    .or(`target_player_id.is.null${playerId ? `,target_player_id.eq.${playerId}` : ""}`)
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(10);
   return data || [];
 }
 
@@ -54,14 +56,53 @@ async function loadPlayerFlashResponses(playerId: string) {
   return (data || []).map(r => r.event_id);
 }
 
+// Risk roll: returns "success" | "partial" | "failure" based on option risk
+function rollRisk(risk: string): { outcome: "success" | "partial" | "failure"; multiplier: number } {
+  const rand = Math.random();
+  if (risk === "élevé") {
+    if (rand < 0.30) return { outcome: "success", multiplier: 1.5 };
+    if (rand < 0.60) return { outcome: "partial", multiplier: 0.5 };
+    return { outcome: "failure", multiplier: -0.5 };
+  } else if (risk === "modéré") {
+    if (rand < 0.50) return { outcome: "success", multiplier: 1.3 };
+    if (rand < 0.80) return { outcome: "partial", multiplier: 0.7 };
+    return { outcome: "failure", multiplier: -0.3 };
+  } else {
+    // faible
+    if (rand < 0.70) return { outcome: "success", multiplier: 1.0 };
+    if (rand < 0.90) return { outcome: "partial", multiplier: 0.5 };
+    return { outcome: "failure", multiplier: 0 };
+  }
+}
+
+function applyMultiplier(deltas: any, multiplier: number): any {
+  if (!deltas) return null;
+  const result: any = {};
+  for (const k of ["stability", "diplomacy", "military", "intelligence"]) {
+    if (deltas[k] !== undefined) result[k] = Math.round(deltas[k] * multiplier);
+  }
+  return result;
+}
+
+const OUTCOME_LABELS = {
+  success: { label: "SUCCÈS", color: "#00e87a", icon: "✓", desc: "Opération réussie — impact maximal" },
+  partial: { label: "SUCCÈS PARTIEL", color: "#ff8800", icon: "◐", desc: "Résultat mitigé — impact réduit" },
+  failure: { label: "ÉCHEC", color: "#ff3344", icon: "✗", desc: "L'opération a échoué — conséquences négatives" },
+};
+
 async function respondToFlashEvent(eventId: string, playerId: string, option: any) {
+  const { outcome, multiplier } = rollRisk(option.risk || "faible");
+  const actualDeltas = applyMultiplier(option.scoreDeltas, multiplier);
   const { error } = await supabase.from("flash_event_responses").insert({
     event_id: eventId,
     player_id: playerId,
     chosen_option: option as any,
     score_deltas: (option.scoreDeltas || null) as any,
+    risk_outcome: outcome,
+    actual_deltas: actualDeltas as any,
   });
-  return !error;
+  if (error) return null;
+  return { outcome, actualDeltas };
 }
 
 function injectStyles() {
@@ -1293,6 +1334,8 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+  const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -1312,10 +1355,78 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
     return () => clearInterval(iv);
   }, [active.length]);
 
-  if (active.length === 0) return null;
+  const handleConfirm = async (eventId: string, option: any) => {
+    setSubmitting(true);
+    const result = await onRespond(eventId, option);
+    setSubmitting(false);
+    if (result) {
+      setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option });
+      // Trigger follow-up event generation in background
+      supabase.functions.invoke("flash-followup", {
+        body: { parent_event_id: eventId, parent_option: option, player_id: playerId, risk_outcome: result.outcome },
+      }).catch(e => console.warn("Follow-up generation failed:", e));
+    }
+  };
+
+  if (active.length === 0 && !outcomeOverlay) return null;
 
   const urgencyColor = (u: number) => u >= 5 ? "#ff3344" : u >= 4 ? "#ff8800" : "#c8a84b";
   const catColor = (cat: string) => cat === "militaire" ? "#ff3344" : cat === "diplomatique" ? "#00e87a" : cat === "économique" ? "#c8a84b" : "#4d8eff";
+
+  // Outcome overlay
+  if (outcomeOverlay) {
+    const info = OUTCOME_LABELS[outcomeOverlay.outcome as keyof typeof OUTCOME_LABELS] || OUTCOME_LABELS.partial;
+    const deltas = outcomeOverlay.actualDeltas || {};
+    return (
+      <div style={{ padding: "0 20px", maxWidth: 480, margin: "0 auto" }}>
+        <div style={{
+          border: `1px solid ${info.color}`,
+          background: `${info.color}0d`,
+          animation: "fadeUp .4s ease forwards",
+        }}>
+          <div style={{ padding: "24px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{info.icon}</div>
+            <div className="gc-h" style={{ fontSize: 22, fontWeight: 700, color: info.color, letterSpacing: 3, marginBottom: 6 }}>
+              {info.label}
+            </div>
+            <div className="gc-m" style={{ fontSize: 11, color: "#5a6a88", letterSpacing: 1, marginBottom: 16 }}>
+              {info.desc}
+            </div>
+            <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", letterSpacing: 2, marginBottom: 10 }}>
+              ACTION : {outcomeOverlay.option?.label?.toUpperCase()}
+            </div>
+
+            {/* Score impact display */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+              {Object.entries(deltas).map(([key, val]: [string, any]) => {
+                const label = SCORE_LABELS[key as keyof typeof SCORE_LABELS] || key;
+                const color = val > 0 ? "#00e87a" : val < 0 ? "#ff3344" : "#5a6a88";
+                return (
+                  <div key={key} style={{ padding: "8px 10px", background: "var(--surf)", border: "1px solid var(--brd)" }}>
+                    <div className="gc-m" style={{ fontSize: 8, color: "#5a6a88", letterSpacing: 1.5, marginBottom: 2 }}>{label}</div>
+                    <div className="gc-h" style={{ fontSize: 18, fontWeight: 700, color, letterSpacing: 1 }}>
+                      {val > 0 ? "+" : ""}{val}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="gc-m" style={{ fontSize: 9, color: info.color, letterSpacing: 2, marginBottom: 12, animation: "blink 2s ease-in-out infinite" }}>
+              ◈ ONDE DE CHOC EN PRÉPARATION...
+            </div>
+
+            <button
+              className="gc-btn full"
+              onClick={() => setOutcomeOverlay(null)}
+            >
+              COMPRIS
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "0 20px", maxWidth: 480, margin: "0 auto" }}>
@@ -1323,6 +1434,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
         const isOpen = sel === ev.id;
         const options = Array.isArray(ev.options) ? ev.options : [];
         const expired = countdowns[ev.id] === "EXPIRÉ";
+        const isFollowUp = !!(ev as any).parent_event_id;
 
         return (
           <div key={ev.id} style={{
@@ -1337,9 +1449,9 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14 }}>⚡</span>
+                  <span style={{ fontSize: 14 }}>{isFollowUp ? "🌊" : "⚡"}</span>
                   <span className="gc-m" style={{ fontSize: 9, color: urgencyColor(ev.urgency), letterSpacing: 2, animation: "blink 1.5s ease-in-out infinite" }}>
-                    CRISE FLASH
+                    {isFollowUp ? "ONDE DE CHOC" : "CRISE FLASH"}
                   </span>
                 </div>
                 <div className="gc-h" style={{ fontSize: 17, fontWeight: 700, letterSpacing: 1 }}>{ev.title}</div>
@@ -1358,33 +1470,40 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond }) {
                 <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
                 <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", letterSpacing: 2, marginBottom: 10 }}>◈ RÉPONSE RAPIDE</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {options.map((opt: any) => (
-                    <div
-                      key={opt.id}
-                      onClick={() => setSelOption(selOption?.id === opt.id ? null : opt)}
-                      style={{
-                        padding: "12px 14px",
-                        border: `1px solid ${selOption?.id === opt.id ? catColor(opt.cat) : "var(--brd)"}`,
-                        background: selOption?.id === opt.id ? `${catColor(opt.cat)}11` : "var(--surf)",
-                        cursor: "pointer",
-                        transition: "all .15s",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span className="gc-h" style={{ fontSize: 14, fontWeight: 600 }}>{opt.label}</span>
-                        <span className="gc-m" style={{ fontSize: 8, color: catColor(opt.cat), letterSpacing: 1 }}>{(opt.cat || "").toUpperCase()}</span>
+                  {options.map((opt: any) => {
+                    const riskClass = opt.risk === "élevé" ? "hi" : opt.risk === "modéré" ? "md" : "lo";
+                    return (
+                      <div
+                        key={opt.id}
+                        onClick={() => setSelOption(selOption?.id === opt.id ? null : opt)}
+                        style={{
+                          padding: "12px 14px",
+                          border: `1px solid ${selOption?.id === opt.id ? catColor(opt.cat) : "var(--brd)"}`,
+                          background: selOption?.id === opt.id ? `${catColor(opt.cat)}11` : "var(--surf)",
+                          cursor: "pointer",
+                          transition: "all .15s",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span className="gc-h" style={{ fontSize: 14, fontWeight: 600 }}>{opt.label}</span>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <span className={`gc-risk ${riskClass}`}>{(opt.risk || "faible").toUpperCase()}</span>
+                            <span className="gc-m" style={{ fontSize: 8, color: catColor(opt.cat), letterSpacing: 1 }}>{(opt.cat || "").toUpperCase()}</span>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 12, color: "#5a6a88", lineHeight: 1.5 }}>{opt.desc}</p>
                       </div>
-                      <p style={{ fontSize: 12, color: "#5a6a88", lineHeight: 1.5 }}>{opt.desc}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {selOption && (
                   <button
                     className="gc-btn full"
                     style={{ marginTop: 12 }}
-                    onClick={() => onRespond(ev.id, selOption)}
+                    disabled={submitting}
+                    onClick={() => handleConfirm(ev.id, selOption)}
                   >
-                    ▸ CONFIRMER LA RÉPONSE
+                    {submitting ? "ANALYSE EN COURS..." : "▸ CONFIRMER LA RÉPONSE"}
                   </button>
                 )}
               </div>
@@ -1428,7 +1547,7 @@ export default function GeoCommand() {
             const t = await loadTheaters(p.id);
             setTheaters(t);
             // Load flash events
-            const fe = await loadActiveFlashEvents();
+            const fe = await loadActiveFlashEvents(p.id);
             setFlashEvents(fe);
             const responded = await loadPlayerFlashResponses(p.id);
             setRespondedFlashIds(responded);
@@ -1447,7 +1566,7 @@ export default function GeoCommand() {
   useEffect(() => {
     if (!player) return;
     const iv = setInterval(async () => {
-      const fe = await loadActiveFlashEvents();
+      const fe = await loadActiveFlashEvents(player.dbId);
       setFlashEvents(fe);
     }, 60000);
     return () => clearInterval(iv);
@@ -1462,7 +1581,7 @@ export default function GeoCommand() {
     setTheaters(t);
     svMeta({ email: p.email });
     // Load flash events + subscribe to push
-    const fe = await loadActiveFlashEvents();
+    const fe = await loadActiveFlashEvents(dbPlayer.id);
     setFlashEvents(fe);
     const responded = await loadPlayerFlashResponses(dbPlayer.id);
     setRespondedFlashIds(responded);
@@ -1527,16 +1646,19 @@ export default function GeoCommand() {
 
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
-    const ok = await respondToFlashEvent(eventId, player.dbId, option);
-    if (ok) {
+    const result = await respondToFlashEvent(eventId, player.dbId, option);
+    if (result) {
       setRespondedFlashIds(prev => [...prev, eventId]);
-      // Apply score deltas
-      if (option.scoreDeltas) {
-        const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, option.scoreDeltas);
+      // Apply actual (risk-modified) deltas
+      if (result.actualDeltas) {
+        const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, result.actualDeltas);
         setPlayer(prev => ({ ...prev, influence_score: newScore }));
         if (player.dbId) updatePlayerScore(player.dbId, newScore);
       }
+      // Return outcome to FlashEventBanner for display
+      return result;
     }
+    return null;
   }, [player]);
 
   const handleReset = useCallback(async () => {

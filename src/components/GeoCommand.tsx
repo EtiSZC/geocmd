@@ -1392,6 +1392,8 @@ export default function GeoCommand() {
 
   const handleDropTheater = useCallback(async (i: number) => {
     const t = theaters[i];
+    // Only allow withdrawal if no decisions have been made
+    if (t?.history?.length > 0) return;
     if (t?.dbId) await deleteTheater(t.dbId);
     setTheaters(prev => prev.filter((_, idx) => idx !== i));
   }, [theaters]);

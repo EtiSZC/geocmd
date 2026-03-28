@@ -428,9 +428,21 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater }) {
+function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater, pendingRemoveIdx = null, onRemoveComplete = null }) {
   const today = fmtDate();
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+  const [removingIdx, setRemovingIdx] = useState<number|null>(null);
+
+  useEffect(() => {
+    if (pendingRemoveIdx !== null && removingIdx === null) {
+      setRemovingIdx(pendingRemoveIdx);
+      const timer = setTimeout(() => {
+        if (onRemoveComplete) onRemoveComplete(pendingRemoveIdx);
+        setRemovingIdx(null);
+      }, 450);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingRemoveIdx]);
 
   return (
     <div style={{ padding:"24px 20px", maxWidth:480, margin:"0 auto" }} className="gc-fade">
@@ -464,19 +476,21 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
             const statusColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : "#5a6a88";
             const statusLabel = isReady ? "PRÊT" : isWaiting ? "EN COURS" : "EN ATTENTE";
             const barColor = isReady ? "#00e87a" : isWaiting ? "#ff8800" : uc;
+            const isRemoving = removingIdx === i;
             return (
               <div
                 key={t.scenario.id}
                 className={isReady ? "gc-ready-card" : ""}
-                onClick={() => onOpenTheater(i)}
                 style={{
                   display:"flex", alignItems:"center", gap:0,
                   background:"var(--surf)", border:"1px solid var(--brd)",
                   cursor:"pointer", position:"relative", overflow:"hidden",
-                  transition:"border-color .15s, background .15s",
+                  transition:"opacity .4s ease, transform .4s ease, max-height .4s ease, margin .4s ease, padding .4s ease, border-width .4s ease",
+                  ...(isRemoving ? { opacity:0, transform:"translateX(-100%)", maxHeight:0, marginBottom:0, borderWidth:0 } : { opacity:1, transform:"translateX(0)", maxHeight:200 }),
                 }}
-                onMouseEnter={e => { if(!isReady){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
-                onMouseLeave={e => { if(!isReady){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
+                onClick={() => !isRemoving && onOpenTheater(i)}
+                onMouseEnter={e => { if(!isReady && !isRemoving){e.currentTarget.style.borderColor = isWaiting?"#1e2e48":"rgba(200,168,75,0.5)"; e.currentTarget.style.background="#0d1522";} }}
+                onMouseLeave={e => { if(!isReady && !isRemoving){e.currentTarget.style.borderColor = "var(--brd)"; e.currentTarget.style.background="var(--surf)";} }}
               >
                 {/* accent bar */}
                 <div style={{ width:3, alignSelf:"stretch", background: barColor, flexShrink:0 }} />
@@ -1400,6 +1414,7 @@ export default function GeoCommand() {
   const [activeIdx, setActiveIdx] = useState<number|null>(null);
   const [flashEvents, setFlashEvents] = useState<any[]>([]);
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
+  const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
 
   // Bootstrap: restore last session from Supabase
   useEffect(() => {
@@ -1475,10 +1490,15 @@ export default function GeoCommand() {
 
   const handleOpenTheater = (i: number) => { setActiveIdx(i); setScreen("theater"); };
 
-  const handleDropTheater = useCallback(async (i: number) => {
+  const handleDropTheater = useCallback(async (i: number, animate = false) => {
     const t = theaters[i];
     if (t?.dbId) await deleteTheater(t.dbId);
-    setTheaters(prev => prev.filter((_, idx) => idx !== i));
+    if (animate) {
+      // Will be picked up by HubScreen removingIdx after screen transition
+      setPendingRemoveIdx(i);
+    } else {
+      setTheaters(prev => prev.filter((_, idx) => idx !== i));
+    }
   }, [theaters]);
 
   const handleDecisionMade = useCallback((index: number, action: any, consequence: any) => {
@@ -1556,13 +1576,15 @@ export default function GeoCommand() {
           <HubScreen player={player} theaters={theaters}
             onOpenTheater={handleOpenTheater}
             onAddTheater={()=>setScreen("scenario-select")}
-            onDropTheater={handleDropTheater}/>
+            onDropTheater={handleDropTheater}
+            pendingRemoveIdx={pendingRemoveIdx}
+            onRemoveComplete={(i: number) => { setPendingRemoveIdx(null); setTheaters(prev => prev.filter((_, idx) => idx !== i)); }}/>
         )}
         {screen==="scenario-select"&&(
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="theater"&&activeIdx!==null&&theaters[activeIdx]&&(
-          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx); setScreen("hub"); }}/>
+          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }}/>
         )}
         {screen==="profile"&&(
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>

@@ -773,7 +773,17 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop }) 
     const last = history[history.length - 1];
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
-        <button className="gc-btn ghost" style={{ marginBottom:20 }} onClick={onBack}>← COMMANDEMENT</button>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+          <button className="gc-btn ghost" onClick={onBack}>← COMMANDEMENT</button>
+          {theater.history.length === 0 && onDrop && (
+            <button
+              onClick={() => { if(confirm("Confirmez-vous le retrait de ce théâtre ? Le slot sera immédiatement libéré.")) onDrop(); }}
+              style={{ background:"rgba(255,51,68,0.12)", border:"1px solid rgba(255,51,68,0.3)", borderRadius:4, cursor:"pointer", color:"#ff5566", fontFamily:"Share Tech Mono", fontSize:11, letterSpacing:1, padding:"5px 12px", transition:"all .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background="rgba(255,51,68,0.25)"; e.currentTarget.style.color="#ff3344"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="rgba(255,51,68,0.12)"; e.currentTarget.style.color="#ff5566"; }}
+            >✕ SE RETIRER</button>
+          )}
+        </div>
 
         {/* Header théâtre */}
         <div style={{ marginBottom:24 }}>

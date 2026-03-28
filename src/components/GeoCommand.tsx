@@ -1547,7 +1547,7 @@ export default function GeoCommand() {
             const t = await loadTheaters(p.id);
             setTheaters(t);
             // Load flash events
-            const fe = await loadActiveFlashEvents();
+            const fe = await loadActiveFlashEvents(p.id);
             setFlashEvents(fe);
             const responded = await loadPlayerFlashResponses(p.id);
             setRespondedFlashIds(responded);

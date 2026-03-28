@@ -431,6 +431,7 @@ function LoginScreen({ onLogin }) {
 function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater }) {
   const today = fmtDate();
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
+  const [removingIdx, setRemovingIdx] = React.useState<number|null>(null);
 
   return (
     <div style={{ padding:"24px 20px", maxWidth:480, margin:"0 auto" }} className="gc-fade">

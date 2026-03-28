@@ -1566,16 +1566,19 @@ export default function GeoCommand() {
 
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
-    const ok = await respondToFlashEvent(eventId, player.dbId, option);
-    if (ok) {
+    const result = await respondToFlashEvent(eventId, player.dbId, option);
+    if (result) {
       setRespondedFlashIds(prev => [...prev, eventId]);
-      // Apply score deltas
-      if (option.scoreDeltas) {
-        const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, option.scoreDeltas);
+      // Apply actual (risk-modified) deltas
+      if (result.actualDeltas) {
+        const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, result.actualDeltas);
         setPlayer(prev => ({ ...prev, influence_score: newScore }));
         if (player.dbId) updatePlayerScore(player.dbId, newScore);
       }
+      // Return outcome to FlashEventBanner for display
+      return result;
     }
+    return null;
   }, [player]);
 
   const handleReset = useCallback(async () => {

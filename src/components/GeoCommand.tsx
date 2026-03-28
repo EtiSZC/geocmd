@@ -1403,6 +1403,7 @@ export default function GeoCommand() {
   const [activeIdx, setActiveIdx] = useState<number|null>(null);
   const [flashEvents, setFlashEvents] = useState<any[]>([]);
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
+  const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
 
   // Bootstrap: restore last session from Supabase
   useEffect(() => {

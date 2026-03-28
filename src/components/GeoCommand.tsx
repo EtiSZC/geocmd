@@ -36,13 +36,15 @@ async function subscribeToPush(playerId: string) {
   }
 }
 
-async function loadActiveFlashEvents() {
+async function loadActiveFlashEvents(playerId?: string) {
+  // Load global events (no target) + events targeted at this player
   const { data } = await supabase
     .from("flash_events")
     .select("*")
     .gt("expires_at", new Date().toISOString())
+    .or(`target_player_id.is.null${playerId ? `,target_player_id.eq.${playerId}` : ""}`)
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(10);
   return data || [];
 }
 

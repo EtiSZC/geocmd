@@ -504,12 +504,14 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                       {statusLabel}
                     </span>
                   </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); onDropTheater(i); }}
-                    style={{ background:"transparent", border:"none", cursor:"pointer", color:"#2e3e56", fontFamily:"Share Tech Mono", fontSize:9, letterSpacing:1, padding:0, transition:"color .15s" }}
-                    onMouseEnter={e => e.currentTarget.style.color="#ff3344"}
-                    onMouseLeave={e => e.currentTarget.style.color="#2e3e56"}
-                  >✕ FERMER</button>
+                  {t.history.length === 0 && (
+                    <button
+                      onClick={e => { e.stopPropagation(); if(confirm("Confirmez-vous le retrait de ce théâtre ? Le slot sera immédiatement libéré.")) onDropTheater(i); }}
+                      style={{ background:"transparent", border:"none", cursor:"pointer", color:"#2e3e56", fontFamily:"Share Tech Mono", fontSize:9, letterSpacing:1, padding:0, transition:"color .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.color="#ff3344"}
+                      onMouseLeave={e => e.currentTarget.style.color="#2e3e56"}
+                    >✕ SE RETIRER</button>
+                  )}
                 </div>
               </div>
             );
@@ -1390,6 +1392,8 @@ export default function GeoCommand() {
 
   const handleDropTheater = useCallback(async (i: number) => {
     const t = theaters[i];
+    // Only allow withdrawal if no decisions have been made
+    if (t?.history?.length > 0) return;
     if (t?.dbId) await deleteTheater(t.dbId);
     setTheaters(prev => prev.filter((_, idx) => idx !== i));
   }, [theaters]);

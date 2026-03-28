@@ -86,11 +86,21 @@ JSON: {"classification":"TRÈS SECRET","situation":"2-3 phrases factuelles basé
 
     } else if (type === "actions") {
       const { scenario, briefing } = params;
+
+      const rolePrompts: Record<string, string> = {
+        "Diplomate": "Tu conseilles un diplomate. Privilégie les options diplomatiques et de négociation (au moins 2 sur 4). Les options militaires doivent être défensives ou dissuasives uniquement.",
+        "Stratège Militaire": "Tu conseilles un stratège militaire. Privilégie les options militaires et de renseignement (au moins 2 sur 4). Inclus toujours une option de projection de force.",
+        "Humanitaire": "Tu conseilles un coordinateur humanitaire. Privilégie les options civiles, humanitaires et économiques (au moins 2 sur 4). Les options militaires doivent concerner la protection des civils ou des corridors humanitaires uniquement.",
+        "Analyste Renseignement": "Tu conseilles un analyste renseignement. Privilégie les options de renseignement et d'analyse (au moins 2 sur 4). Inclus toujours une option de collecte d'information ou de cyber-renseignement.",
+      };
+
+      const roleCtx = rolePrompts[scenario.playerRole] || "";
+
       const raw = await callAI(
-        `Tu es conseiller stratégique senior auprès d'un chef d'État. Réponds UNIQUEMENT en JSON valide.`,
+        `Tu es conseiller stratégique senior. Réponds UNIQUEMENT en JSON valide. ${roleCtx}`,
         `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole} / ${scenario.playerCountry}.
 Situation actuelle: ${briefing.situation}
-Propose exactement 4 options stratégiques distinctes et réalistes. JSON:
+Propose exactement 4 options stratégiques distinctes et réalistes, adaptées à la spécialité "${scenario.playerRole}". JSON:
 [{"id":"a1","label":"Nom court de l'action","cat":"militaire|diplomatique|économique|renseignement","catColor":"#ff3344|#00e87a|#c8a84b|#4d8eff","desc":"Description en 1-2 phrases.","risk":"faible|modéré|élevé","outcome":"Résultat projeté en 1 phrase."}]
 Catégories et couleurs: militaire=#ff3344, diplomatique=#00e87a, économique=#c8a84b, renseignement=#4d8eff.`
       );

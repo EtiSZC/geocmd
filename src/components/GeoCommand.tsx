@@ -507,9 +507,9 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
                   {t.history.length === 0 && (
                     <button
                       onClick={e => { e.stopPropagation(); if(confirm("Confirmez-vous le retrait de ce théâtre ? Le slot sera immédiatement libéré.")) onDropTheater(i); }}
-                      style={{ background:"transparent", border:"none", cursor:"pointer", color:"#2e3e56", fontFamily:"Share Tech Mono", fontSize:9, letterSpacing:1, padding:0, transition:"color .15s" }}
-                      onMouseEnter={e => e.currentTarget.style.color="#ff3344"}
-                      onMouseLeave={e => e.currentTarget.style.color="#2e3e56"}
+                      style={{ background:"rgba(255,51,68,0.12)", border:"1px solid rgba(255,51,68,0.3)", borderRadius:4, cursor:"pointer", color:"#ff5566", fontFamily:"Share Tech Mono", fontSize:11, letterSpacing:1, padding:"4px 10px", transition:"all .15s", marginTop:4 }}
+                      onMouseEnter={e => { e.currentTarget.style.background="rgba(255,51,68,0.25)"; e.currentTarget.style.color="#ff3344"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="rgba(255,51,68,0.12)"; e.currentTarget.style.color="#ff5566"; }}
                     >✕ SE RETIRER</button>
                   )}
                 </div>

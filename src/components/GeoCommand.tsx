@@ -657,7 +657,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   );
 }
 
-function TheaterView({ theater, theaterIndex, onDecisionMade, onBack }) {
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
   const [actions, setActions] = useState(null);

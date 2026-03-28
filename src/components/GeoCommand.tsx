@@ -54,14 +54,53 @@ async function loadPlayerFlashResponses(playerId: string) {
   return (data || []).map(r => r.event_id);
 }
 
+// Risk roll: returns "success" | "partial" | "failure" based on option risk
+function rollRisk(risk: string): { outcome: "success" | "partial" | "failure"; multiplier: number } {
+  const rand = Math.random();
+  if (risk === "élevé") {
+    if (rand < 0.30) return { outcome: "success", multiplier: 1.5 };
+    if (rand < 0.60) return { outcome: "partial", multiplier: 0.5 };
+    return { outcome: "failure", multiplier: -0.5 };
+  } else if (risk === "modéré") {
+    if (rand < 0.50) return { outcome: "success", multiplier: 1.3 };
+    if (rand < 0.80) return { outcome: "partial", multiplier: 0.7 };
+    return { outcome: "failure", multiplier: -0.3 };
+  } else {
+    // faible
+    if (rand < 0.70) return { outcome: "success", multiplier: 1.0 };
+    if (rand < 0.90) return { outcome: "partial", multiplier: 0.5 };
+    return { outcome: "failure", multiplier: 0 };
+  }
+}
+
+function applyMultiplier(deltas: any, multiplier: number): any {
+  if (!deltas) return null;
+  const result: any = {};
+  for (const k of ["stability", "diplomacy", "military", "intelligence"]) {
+    if (deltas[k] !== undefined) result[k] = Math.round(deltas[k] * multiplier);
+  }
+  return result;
+}
+
+const OUTCOME_LABELS = {
+  success: { label: "SUCCÈS", color: "#00e87a", icon: "✓", desc: "Opération réussie — impact maximal" },
+  partial: { label: "SUCCÈS PARTIEL", color: "#ff8800", icon: "◐", desc: "Résultat mitigé — impact réduit" },
+  failure: { label: "ÉCHEC", color: "#ff3344", icon: "✗", desc: "L'opération a échoué — conséquences négatives" },
+};
+
 async function respondToFlashEvent(eventId: string, playerId: string, option: any) {
+  const { outcome, multiplier } = rollRisk(option.risk || "faible");
+  const actualDeltas = applyMultiplier(option.scoreDeltas, multiplier);
   const { error } = await supabase.from("flash_event_responses").insert({
     event_id: eventId,
     player_id: playerId,
     chosen_option: option as any,
     score_deltas: (option.scoreDeltas || null) as any,
+    risk_outcome: outcome,
+    actual_deltas: actualDeltas as any,
   });
-  return !error;
+  if (error) return null;
+  return { outcome, actualDeltas };
 }
 
 function injectStyles() {

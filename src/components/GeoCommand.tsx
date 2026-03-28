@@ -1571,7 +1571,7 @@ export default function GeoCommand() {
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="theater"&&activeIdx!==null&&theaters[activeIdx]&&(
-          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx); setScreen("hub"); }}/>
+          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }}/>
         )}
         {screen==="profile"&&(
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>

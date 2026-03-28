@@ -1581,7 +1581,7 @@ export default function GeoCommand() {
     setTheaters(t);
     svMeta({ email: p.email });
     // Load flash events + subscribe to push
-    const fe = await loadActiveFlashEvents();
+    const fe = await loadActiveFlashEvents(dbPlayer.id);
     setFlashEvents(fe);
     const responded = await loadPlayerFlashResponses(dbPlayer.id);
     setRespondedFlashIds(responded);

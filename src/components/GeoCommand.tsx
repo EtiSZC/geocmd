@@ -1566,7 +1566,7 @@ export default function GeoCommand() {
   useEffect(() => {
     if (!player) return;
     const iv = setInterval(async () => {
-      const fe = await loadActiveFlashEvents();
+      const fe = await loadActiveFlashEvents(player.dbId);
       setFlashEvents(fe);
     }, 60000);
     return () => clearInterval(iv);

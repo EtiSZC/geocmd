@@ -539,10 +539,19 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
   );
 }
 
+const PLAYER_ROLES = [
+  { id: "diplomate", label: "DIPLOMATE", icon: "🕊️", desc: "Négociation, médiation et canaux diplomatiques.", color: "#00e87a" },
+  { id: "militaire", label: "STRATÈGE MILITAIRE", icon: "⚔️", desc: "Opérations armées, défense et projection de force.", color: "#ff3344" },
+  { id: "humanitaire", label: "HUMANITAIRE", icon: "🏥", desc: "Aide aux populations, corridors humanitaires et logistique civile.", color: "#4d8eff" },
+  { id: "analyste", label: "ANALYSTE RENSEIGNEMENT", icon: "🔍", desc: "Collecte d'information, HUMINT/SIGINT et évaluation des menaces.", color: "#c8a84b" },
+];
+
 function ScenarioSelect({ existingIds, onSelect, onBack }) {
   const [scenarios, setScenarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sel, setSel] = useState(null);
+  const [chosenRole, setChosenRole] = useState<string | null>(null);
+  const [step, setStep] = useState<"scenario" | "role">("scenario");
 
   useEffect(() => {
     (async () => {
@@ -556,6 +565,50 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
 
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
 
+  const handleConfirmRole = () => {
+    if (!sel || !chosenRole) return;
+    const role = PLAYER_ROLES.find(r => r.id === chosenRole);
+    onSelect({ ...sel, playerRole: role?.label || sel.playerRole });
+  };
+
+  // Step 2: Role selection
+  if (step === "role" && sel) {
+    return (
+      <div style={{ padding:"24px 20px", maxWidth:600, margin:"0 auto" }} className="gc-fade">
+        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={() => { setStep("scenario"); setChosenRole(null); }}>← SCÉNARIO</button>
+        <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:4 }}>{sel.title}</div>
+        <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>AFFECTATION</div>
+        <h2 className="gc-h" style={{ fontSize:24, fontWeight:600, letterSpacing:2, marginTop:4, marginBottom:6 }}>CHOISISSEZ VOTRE RÔLE</h2>
+        <p style={{ fontSize:13, color:"#5a6a88", lineHeight:1.6, marginBottom:20 }}>
+          Votre rôle détermine votre perspective et les options stratégiques disponibles sur ce théâtre.
+        </p>
+        <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+          {PLAYER_ROLES.map(r => (
+            <div
+              key={r.id}
+              className={`gc-action ${chosenRole===r.id?"sel":""}`}
+              onClick={() => setChosenRole(chosenRole===r.id?null:r.id)}
+              style={{ cursor:"pointer" }}
+            >
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                <span style={{ fontSize:20 }}>{r.icon}</span>
+                <span className="gc-h" style={{ fontSize:17, fontWeight:600, color: chosenRole===r.id ? r.color : "var(--txt)" }}>{r.label}</span>
+              </div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.58, paddingLeft:30 }}>{r.desc}</p>
+              {chosenRole===r.id && (
+                <div className="gc-m" style={{ fontSize:10, color:r.color, letterSpacing:2, marginTop:8, paddingLeft:30 }}>
+                  ◈ AFFECTÉ À : {sel.playerCountry}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <button className="gc-btn full" disabled={!chosenRole} onClick={handleConfirmRole}>▸ PRENDRE LE COMMANDEMENT</button>
+      </div>
+    );
+  }
+
+  // Step 1: Scenario selection
   return (
     <div style={{ padding:"24px 20px", maxWidth:600, margin:"0 auto" }}>
       <div style={{ marginBottom:22 }}>
@@ -592,7 +645,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
                 <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.58 }}>{s.description}</p>
                 {sel?.id===s.id && (
                   <div style={{ marginTop:14 }}>
-                    <button className="gc-btn full" onClick={()=>onSelect(s)}>▸ PRENDRE LE COMMANDEMENT</button>
+                    <button className="gc-btn full" onClick={(e) => { e.stopPropagation(); setStep("role"); }}>▸ CHOISIR UN RÔLE</button>
                   </div>
                 )}
               </div>

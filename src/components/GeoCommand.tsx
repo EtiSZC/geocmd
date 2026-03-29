@@ -1320,6 +1320,8 @@ function SettingsScreen({ playerId, onBack }) {
 
       <TestPushButton playerId={playerId} />
 
+      <InstallPWAButton />
+
       <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
         <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>
           ℹ Les notifications push nécessitent l'autorisation du navigateur. Si vous désactivez un type ci-dessus, les notifications correspondantes ne seront plus envoyées à ce terminal.

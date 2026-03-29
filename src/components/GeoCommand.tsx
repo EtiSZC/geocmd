@@ -1265,6 +1265,43 @@ function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
 
+function InstallPWAButton() {
+  const [canInstall, setCanInstall] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  useEffect(() => {
+    const check = () => setCanInstall(!!(window as any).__getPWAInstallPrompt?.());
+    check();
+    window.addEventListener("pwa-install-available", check);
+    window.addEventListener("pwa-install-done", () => { setInstalled(true); setCanInstall(false); });
+    return () => { window.removeEventListener("pwa-install-available", check); };
+  }, []);
+  const handleInstall = async () => {
+    const prompt = (window as any).__getPWAInstallPrompt?.();
+    if (!prompt) return;
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    if (result.outcome === "accepted") { setInstalled(true); setCanInstall(false); }
+  };
+  if (installed) return (
+    <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
+      <div className="gc-m" style={{ fontSize:11, color:"#00e87a", letterSpacing:2 }}>✓ APPLICATION INSTALLÉE</div>
+    </div>
+  );
+  if (!canInstall) return null;
+  return (
+    <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
+      <div className="gc-m" style={{ fontSize:11, color:"#4d8eff", letterSpacing:2, marginBottom:8 }}>INSTALLATION</div>
+      <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:"0 0 12px 0" }}>
+        Installez GeoCommand sur votre appareil pour un accès direct depuis l'écran d'accueil.
+      </p>
+      <button className="gc-btn" onClick={handleInstall}
+        style={{ background:"#4d8eff", color:"#fff", border:"none", padding:"10px 20px", fontSize:12, letterSpacing:2, cursor:"pointer", width:"100%" }}>
+        📲 INSTALLER L'APPLICATION
+      </button>
+    </div>
+  );
+}
+
 function SettingsScreen({ playerId, onBack }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);

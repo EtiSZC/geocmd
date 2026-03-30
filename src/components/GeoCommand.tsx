@@ -1535,6 +1535,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
                     );
                   })}
                 </div>
+                </div>
                 {selOption && (
                   <button
                     className="gc-btn full"
@@ -1543,6 +1544,15 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
                     onClick={() => handleConfirm(ev.id, selOption)}
                   >
                     {submitting ? "ANALYSE EN COURS..." : "▸ CONFIRMER LA RÉPONSE"}
+                  </button>
+                )}
+                {isFollowUp && !selOption && (
+                  <button
+                    className="gc-btn full"
+                    style={{ marginTop: 12, background: "transparent", border: "1px solid var(--brd)", color: "#5a6a88" }}
+                    onClick={() => onDismiss(ev.id)}
+                  >
+                    ✕ IGNORER L'ONDE DE CHOC
                   </button>
                 )}
               </div>

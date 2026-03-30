@@ -1535,7 +1535,6 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
                     );
                   })}
                 </div>
-                </div>
                 {selOption && (
                   <button
                     className="gc-btn full"

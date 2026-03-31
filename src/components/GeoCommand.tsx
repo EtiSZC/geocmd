@@ -1456,8 +1456,18 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
   const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any; narrativeMsg?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Detect primary player role from theaters
-  const playerRole = theaters.length > 0 ? theaters[0]?.scenario?.role : null;
+  // Detect primary player role from theaters — map label back to NARRATIVE_REACTIONS key
+  const playerRole = (() => {
+    if (theaters.length === 0) return null;
+    const raw = theaters[0]?.scenario?.playerRole || theaters[0]?.scenario?.role || null;
+    if (!raw) return null;
+    const lower = raw.toLowerCase();
+    if (lower.includes("diplomate")) return "diplomate";
+    if (lower.includes("militaire") || lower.includes("stratège")) return "militaire";
+    if (lower.includes("humanitaire")) return "humanitaire";
+    if (lower.includes("analyste") || lower.includes("renseignement")) return "analyste";
+    return null;
+  })();
 
   useEffect(() => {
     const tick = () => {

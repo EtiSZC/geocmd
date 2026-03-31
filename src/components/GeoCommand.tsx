@@ -695,7 +695,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   const handleConfirmRole = () => {
     if (!sel || !chosenRole) return;
     const role = PLAYER_ROLES.find(r => r.id === chosenRole);
-    onSelect({ ...sel, playerRole: role?.label || sel.playerRole });
+    onSelect({ ...sel, playerRole: role?.label || sel.playerRole, roleId: chosenRole });
   };
 
   // Step 2: Role selection
@@ -1456,16 +1456,19 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
   const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any; narrativeMsg?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Detect primary player role from theaters — map label back to NARRATIVE_REACTIONS key
+  // Detect primary player role from theaters — use roleId if available, else fuzzy-match playerRole
   const playerRole = (() => {
     if (theaters.length === 0) return null;
-    const raw = theaters[0]?.scenario?.playerRole || theaters[0]?.scenario?.role || null;
-    if (!raw) return null;
-    const lower = raw.toLowerCase();
-    if (lower.includes("diplomate")) return "diplomate";
-    if (lower.includes("militaire") || lower.includes("stratège")) return "militaire";
-    if (lower.includes("humanitaire")) return "humanitaire";
-    if (lower.includes("analyste") || lower.includes("renseignement")) return "analyste";
+    const t = theaters[0]?.scenario;
+    if (!t) return null;
+    // Direct id match (new theaters store roleId)
+    if (t.roleId && NARRATIVE_REACTIONS[t.roleId]) return t.roleId;
+    // Fuzzy match from playerRole label (legacy theaters)
+    const raw = (t.playerRole || "").toLowerCase();
+    if (raw.includes("diplomate") || raw.includes("médiat") || raw.includes("négociat")) return "diplomate";
+    if (raw.includes("militaire") || raw.includes("stratège") || raw.includes("command") || raw.includes("défense")) return "militaire";
+    if (raw.includes("humanitaire") || raw.includes("aide") || raw.includes("secours") || raw.includes("réfugié")) return "humanitaire";
+    if (raw.includes("analyste") || raw.includes("renseignement") || raw.includes("intelligence") || raw.includes("observat")) return "analyste";
     return null;
   })();
 

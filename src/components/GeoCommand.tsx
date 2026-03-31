@@ -1832,6 +1832,7 @@ export default function GeoCommand() {
               playerId={player.dbId}
               onRespond={handleFlashRespond}
               onDismiss={(eventId: string) => setRespondedFlashIds(prev => [...prev, eventId])}
+              theaters={theaters}
             />
           </div>
         )}

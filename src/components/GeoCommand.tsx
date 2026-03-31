@@ -1448,6 +1448,52 @@ function SettingsScreen({ playerId, onBack }) {
   );
 }
 
+function ShockwaveCountdown({ color, onComplete }: { color: string; onComplete: () => void }) {
+  const [count, setCount] = useState(5);
+  const [phase, setPhase] = useState<"counting" | "impact">("counting");
+
+  useEffect(() => {
+    if (phase === "impact") {
+      const t = setTimeout(onComplete, 1200);
+      return () => clearTimeout(t);
+    }
+    if (count <= 0) { setPhase("impact"); return; }
+    const t = setTimeout(() => setCount(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [count, phase, onComplete]);
+
+  if (phase === "impact") {
+    return (
+      <div style={{ textAlign: "center", padding: "16px 0", animation: "fadeUp .4s ease" }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🌊</div>
+        <div className="gc-m" style={{ fontSize: 11, color, letterSpacing: 3, animation: "blink 0.5s ease-in-out infinite" }}>
+          ◈ ONDE DE CHOC IMMINENTE ◈
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ textAlign: "center", padding: "12px 0" }}>
+      <div className="gc-m" style={{ fontSize: 9, color, letterSpacing: 2, marginBottom: 8 }}>
+        ◈ ONDE DE CHOC DANS
+      </div>
+      <div className="gc-h" style={{
+        fontSize: 36, fontWeight: 700, color,
+        fontVariantNumeric: "tabular-nums",
+        textShadow: `0 0 20px ${color}`,
+        transition: "transform 0.3s ease",
+        transform: `scale(${count <= 2 ? 1.15 : 1})`,
+      }}>
+        {count}
+      </div>
+      <div className="gc-m" style={{ fontSize: 9, color: "#5a6a88", letterSpacing: 2, marginTop: 4 }}>
+        PRÉPAREZ-VOUS
+      </div>
+    </div>
+  );
+}
+
 function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
@@ -1562,16 +1608,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               </div>
             )}
 
-            <div className="gc-m" style={{ fontSize: 9, color: info.color, letterSpacing: 2, marginBottom: 12, animation: "blink 2s ease-in-out infinite" }}>
-              ◈ ONDE DE CHOC EN PRÉPARATION...
-            </div>
-
-            <button
-              className="gc-btn full"
-              onClick={() => setOutcomeOverlay(null)}
-            >
-              COMPRIS
-            </button>
+            <ShockwaveCountdown color={info.color} onComplete={() => setOutcomeOverlay(null)} />
           </div>
         </div>
       </div>

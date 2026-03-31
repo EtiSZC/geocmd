@@ -1608,7 +1608,17 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               </div>
             )}
 
-            <ShockwaveCountdown color={info.color} onComplete={() => setOutcomeOverlay(null)} />
+            <button
+              onClick={() => setOutcomeOverlay(null)}
+              className="gc-m"
+              style={{
+                marginTop: 16, padding: "10px 32px", background: info.color, color: "#0a0f1a",
+                border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12,
+                letterSpacing: 2, fontWeight: 700, textTransform: "uppercase",
+              }}
+            >
+              FERMER
+            </button>
           </div>
         </div>
       </div>

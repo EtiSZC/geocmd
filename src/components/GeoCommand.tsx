@@ -695,7 +695,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   const handleConfirmRole = () => {
     if (!sel || !chosenRole) return;
     const role = PLAYER_ROLES.find(r => r.id === chosenRole);
-    onSelect({ ...sel, playerRole: role?.label || sel.playerRole });
+    onSelect({ ...sel, playerRole: role?.label || sel.playerRole, roleId: chosenRole });
   };
 
   // Step 2: Role selection

@@ -1448,7 +1448,7 @@ function SettingsScreen({ playerId, onBack }) {
   );
 }
 
-function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss }) {
+function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);

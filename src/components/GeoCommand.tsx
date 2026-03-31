@@ -1562,16 +1562,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               </div>
             )}
 
-            <div className="gc-m" style={{ fontSize: 9, color: info.color, letterSpacing: 2, marginBottom: 12, animation: "blink 2s ease-in-out infinite" }}>
-              ◈ ONDE DE CHOC EN PRÉPARATION...
-            </div>
-
-            <button
-              className="gc-btn full"
-              onClick={() => setOutcomeOverlay(null)}
-            >
-              COMPRIS
-            </button>
+            <ShockwaveCountdown color={info.color} onComplete={() => setOutcomeOverlay(null)} />
           </div>
         </div>
       </div>

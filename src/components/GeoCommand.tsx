@@ -1482,7 +1482,8 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
     const result = await onRespond(eventId, option);
     setSubmitting(false);
     if (result) {
-      setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option });
+      const narrativeMsg = playerRole ? getRandomReaction(playerRole, result.outcome) : null;
+      setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option, narrativeMsg });
       // Trigger follow-up event generation in background
       supabase.functions.invoke("flash-followup", {
         body: { parent_event_id: eventId, parent_option: option, player_id: playerId, risk_outcome: result.outcome },

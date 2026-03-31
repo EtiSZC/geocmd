@@ -1453,8 +1453,11 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
-  const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any } | null>(null);
+  const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any; narrativeMsg?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Detect primary player role from theaters
+  const playerRole = theaters.length > 0 ? theaters[0]?.scenario?.role : null;
 
   useEffect(() => {
     const tick = () => {

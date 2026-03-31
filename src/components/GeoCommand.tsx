@@ -1535,6 +1535,20 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               })}
             </div>
 
+            {outcomeOverlay.narrativeMsg && (
+              <div style={{
+                padding: "14px 16px", margin: "0 0 16px 0",
+                background: "var(--surf)", border: "1px solid var(--brd)",
+                borderLeft: `3px solid ${info.color}`,
+                textAlign: "left",
+              }}>
+                <div className="gc-m" style={{ fontSize: 8, color: info.color, letterSpacing: 2, marginBottom: 6 }}>📡 RAPPORT DE TERRAIN</div>
+                <p style={{ fontSize: 13, color: "#c8d8f0", lineHeight: 1.65, margin: 0, fontStyle: "italic" }}>
+                  « {outcomeOverlay.narrativeMsg} »
+                </p>
+              </div>
+            )}
+
             <div className="gc-m" style={{ fontSize: 9, color: info.color, letterSpacing: 2, marginBottom: 12, animation: "blink 2s ease-in-out infinite" }}>
               ◈ ONDE DE CHOC EN PRÉPARATION...
             </div>

@@ -90,6 +90,86 @@ const OUTCOME_LABELS = {
   failure: { label: "ÉCHEC", color: "#ff3344", icon: "✗", desc: "L'opération a échoué — conséquences négatives" },
 };
 
+// Narrative reaction messages per role × outcome (cosmetic only)
+const NARRATIVE_REACTIONS: Record<string, Record<string, string[]>> = {
+  diplomate: {
+    success: [
+      "L'Ambassadeur vous félicite : « Brillant. Le Quai d'Orsay en parlera longtemps. »",
+      "Le Secrétaire Général de l'ONU vous envoie un mot manuscrit de remerciement.",
+      "Votre homologue adverse vous invite à un dîner de gala — signe que le message est passé.",
+    ],
+    partial: [
+      "Le Ministre des Affaires Étrangères soupire : « C'est… un début. »",
+      "La presse titre « Accord en demi-teinte » — votre téléphone n'arrête pas de sonner.",
+      "Votre adjoint murmure : « On a évité le pire, mais ne criez pas victoire. »",
+    ],
+    failure: [
+      "L'Ambassadeur claque la porte de son bureau. Vous entendez des objets voler.",
+      "Le Quai d'Orsay vous « suggère fortement » de prendre quelques jours de repos.",
+      "Votre homologue adverse refuse désormais de prendre vos appels.",
+    ],
+  },
+  militaire: {
+    success: [
+      "Le Chef d'État-Major vous serre la main : « Du travail propre, comme on aime. »",
+      "Les troupes sur le terrain scandent votre indicatif radio. Le moral est au plus haut.",
+      "Le Ministre de la Défense vous propose pour la Légion d'Honneur.",
+    ],
+    partial: [
+      "Le Général grogne : « Mission accomplie… à moitié. Débriefing dans mon bureau. »",
+      "Les pertes sont contenues mais l'objectif secondaire n'a pas été atteint.",
+      "Le rapport de terrain conclut : « Résultat tactique acceptable, impact stratégique limité. »",
+    ],
+    failure: [
+      "Le Chef d'État-Major vous passe un savon mémorable devant tout l'état-major.",
+      "CNN diffuse des images embarrassantes de l'opération. Le Président est furieux.",
+      "Votre unité est relevée de sa mission. On parle déjà de « commission d'enquête ».",
+    ],
+  },
+  humanitaire: {
+    success: [
+      "Médecins Sans Frontières salue votre action : « Des milliers de vies sauvées. »",
+      "Un convoi de 200 tonnes d'aide atteint les civils grâce à votre corridor. Standing ovation au QG.",
+      "Le Haut-Commissaire aux Réfugiés vous cite en exemple dans son rapport annuel.",
+    ],
+    partial: [
+      "L'aide est arrivée, mais pas partout. Les zones sud restent inaccessibles.",
+      "Le coordinateur terrain soupire : « On a fait ce qu'on a pu avec ce qu'on avait. »",
+      "Les ONG partenaires saluent l'effort mais pointent les lacunes logistiques.",
+    ],
+    failure: [
+      "Le convoi humanitaire a été bloqué. Des familles entières n'ont rien reçu.",
+      "La Croix-Rouge publie un communiqué cinglant sur « l'échec de la coordination ».",
+      "Les images de camps surpeuplés font la une. Votre supérieur demande des comptes.",
+    ],
+  },
+  analyste: {
+    success: [
+      "Le Directeur Général de la DGSE vous adresse un rare « Excellent travail, continuez. »",
+      "Votre rapport a permis de déjouer l'opération adverse. Le Conseil de Défense vous remercie.",
+      "Vos sources sur le terrain confirment : votre analyse était d'une précision chirurgicale.",
+    ],
+    partial: [
+      "Le DGSE hausse un sourcil : « Votre note était juste… mais incomplète. »",
+      "L'analyse a permis d'anticiper 60% du scénario. Les 40% restants posent problème.",
+      "Votre collègue de la DRM vous glisse : « Pas mal, mais on peut mieux faire. »",
+    ],
+    failure: [
+      "Le Directeur Général de la DGSE vous passe un savon monumental. « Inacceptable. »",
+      "Votre évaluation était complètement à côté. Les décideurs ont été induits en erreur.",
+      "On murmure dans les couloirs de la Piscine que votre poste est « en discussion ».",
+    ],
+  },
+};
+
+function getRandomReaction(role: string, outcome: string): string | null {
+  const roleMessages = NARRATIVE_REACTIONS[role];
+  if (!roleMessages) return null;
+  const messages = roleMessages[outcome];
+  if (!messages || messages.length === 0) return null;
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 async function respondToFlashEvent(eventId: string, playerId: string, option: any) {
   const { outcome, multiplier } = rollRisk(option.risk || "faible");
   const actualDeltas = applyMultiplier(option.scoreDeltas, multiplier);
@@ -1368,13 +1448,16 @@ function SettingsScreen({ playerId, onBack }) {
   );
 }
 
-function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss }) {
+function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
-  const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any } | null>(null);
+  const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any; narrativeMsg?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Detect primary player role from theaters
+  const playerRole = theaters.length > 0 ? theaters[0]?.scenario?.role : null;
 
   useEffect(() => {
     const tick = () => {
@@ -1399,7 +1482,8 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
     const result = await onRespond(eventId, option);
     setSubmitting(false);
     if (result) {
-      setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option });
+      const narrativeMsg = playerRole ? getRandomReaction(playerRole, result.outcome) : null;
+      setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option, narrativeMsg });
       // Trigger follow-up event generation in background
       supabase.functions.invoke("flash-followup", {
         body: { parent_event_id: eventId, parent_option: option, player_id: playerId, risk_outcome: result.outcome },
@@ -1450,6 +1534,20 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
                 );
               })}
             </div>
+
+            {outcomeOverlay.narrativeMsg && (
+              <div style={{
+                padding: "14px 16px", margin: "0 0 16px 0",
+                background: "var(--surf)", border: "1px solid var(--brd)",
+                borderLeft: `3px solid ${info.color}`,
+                textAlign: "left",
+              }}>
+                <div className="gc-m" style={{ fontSize: 8, color: info.color, letterSpacing: 2, marginBottom: 6 }}>📡 RAPPORT DE TERRAIN</div>
+                <p style={{ fontSize: 13, color: "#c8d8f0", lineHeight: 1.65, margin: 0, fontStyle: "italic" }}>
+                  « {outcomeOverlay.narrativeMsg} »
+                </p>
+              </div>
+            )}
 
             <div className="gc-m" style={{ fontSize: 9, color: info.color, letterSpacing: 2, marginBottom: 12, animation: "blink 2s ease-in-out infinite" }}>
               ◈ ONDE DE CHOC EN PRÉPARATION...
@@ -1734,6 +1832,7 @@ export default function GeoCommand() {
               playerId={player.dbId}
               onRespond={handleFlashRespond}
               onDismiss={(eventId: string) => setRespondedFlashIds(prev => [...prev, eventId])}
+              theaters={theaters}
             />
           </div>
         )}

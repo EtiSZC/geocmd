@@ -194,13 +194,53 @@ serve(async (req) => {
 
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
+      // Calendar of major international events for seasonal theming
+      const now = new Date();
+      const month = now.getMonth() + 1; // 1-12
+      const day = now.getDate();
+      const seasonalEvents: string[] = [];
+
+      // January
+      if (month === 1 && day >= 15 && day <= 25) seasonalEvents.push("Forum économique mondial de Davos");
+      // February
+      if (month === 2 && day >= 10 && day <= 20) seasonalEvents.push("Conférence de Munich sur la sécurité");
+      // March
+      if (month === 3 && day >= 1 && day <= 15) seasonalEvents.push("Session du Conseil des droits de l'homme de l'ONU à Genève");
+      // April
+      if (month === 4 && day >= 10 && day <= 20) seasonalEvents.push("Réunions de printemps du FMI et de la Banque mondiale");
+      // May
+      if (month === 5 && day >= 5 && day <= 15) seasonalEvents.push("Sommet de l'OTAN");
+      if (month === 5 && day >= 20 && day <= 31) seasonalEvents.push("Sommet du G7");
+      // June
+      if (month === 6 && day >= 1 && day <= 15) seasonalEvents.push("Forum de Shangri-La sur la sécurité en Asie");
+      if (month === 6 && day >= 20 && day <= 30) seasonalEvents.push("Sommet de l'Union européenne");
+      // July
+      if (month === 7) seasonalEvents.push("Présidence tournante du Conseil de sécurité de l'ONU");
+      // August
+      if (month === 8 && day >= 1 && day <= 15) seasonalEvents.push("Sommet de la CEDEAO");
+      if (month === 8 && day >= 20 && day <= 31) seasonalEvents.push("Sommet des BRICS");
+      // September
+      if (month === 9 && day >= 15 && day <= 30) seasonalEvents.push("Assemblée générale des Nations Unies à New York");
+      // October
+      if (month === 10 && day >= 10 && day <= 20) seasonalEvents.push("Assemblées annuelles du FMI");
+      // November
+      if (month === 11 && day >= 1 && day <= 15) seasonalEvents.push("COP - Conférence des Nations Unies sur le climat");
+      if (month === 11 && day >= 15 && day <= 25) seasonalEvents.push("Sommet du G20");
+      if (month === 11 && day >= 10 && day <= 15) seasonalEvents.push("Forum de Paris sur la Paix");
+      // December
+      if (month === 12 && day >= 1 && day <= 15) seasonalEvents.push("Sommet UE-Afrique");
+
+      const seasonalHint = seasonalEvents.length > 0
+        ? `\n\nCONTEXTE SAISONNIER : Nous sommes le ${day}/${month}/2026. En ce moment se déroule : ${seasonalEvents.join(", ")}. Tu DOIS créer une crise en lien direct avec cet événement international (tensions en coulisses, incident pendant le sommet, fuite diplomatique, coup de théâtre en marge de l'événement, etc.). Mentionne explicitement le sommet/événement dans le titre ou la description.`
+        : `\n\nNous sommes le ${day}/${month}/2026. Génère une crise basée sur l'actualité géopolitique de cette période.`;
+
       const aiResp = await fetch(AI_URL, {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste basée sur l'actualité de mars 2026.` },
+            { role: "system", content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste.${seasonalHint}` },
             { role: "user", content: `Génère un événement flash géopolitique urgent. La crise doit être surprenante mais plausible.
 JSON: {"title":"Titre court","description":"Description en 2-3 phrases.","region":"Zone géographique","event_type":"militaire|diplomatique|économique|humanitaire","urgency":4,"options":[{"id":"opt1","label":"Action rapide 1","desc":"Description","cat":"militaire|diplomatique|économique|renseignement","risk":"faible|modéré|élevé","scoreDeltas":{"stability":3,"diplomacy":-2,"military":5,"intelligence":0}},{"id":"opt2","label":"Action rapide 2","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}},{"id":"opt3","label":"Action rapide 3","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}}]}
 Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.` },

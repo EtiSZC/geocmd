@@ -186,7 +186,7 @@ serve(async (req) => {
     const { action, force } = await req.json().catch(() => ({ action: "generate", force: false }));
 
     if (action === "generate") {
-      if (!force && Math.random() > 0.25) {
+      if (!force && Math.random() > 0.167) {
         return new Response(JSON.stringify({ success: true, skipped: true, reason: "Random roll — no event this time" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

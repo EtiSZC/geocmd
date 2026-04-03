@@ -306,13 +306,17 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-async function callAI(type: string, params: Record<string, any> = {}) {
-  const { data, error } = await supabase.functions.invoke("geocmd-ai", {
-    body: { type, ...params },
-  });
-  if (error) throw error;
-  if (!data?.success) throw new Error(data?.error || "AI error");
-  return data.data;
+async function callAI(type: string, params: Record<string, any> = {}, timeoutMs = 45000) {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT")), timeoutMs));
+  const call = (async () => {
+    const { data, error } = await supabase.functions.invoke("geocmd-ai", {
+      body: { type, ...params },
+    });
+    if (error) throw error;
+    if (!data?.success) throw new Error(data?.error || "AI error");
+    return data.data;
+  })();
+  return Promise.race([call, timeout]);
 }
 
 function parseJ(raw) {

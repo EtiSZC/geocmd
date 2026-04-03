@@ -306,13 +306,19 @@ function injectStyles() {
   document.head.appendChild(s);
 }
 
-async function callAI(type: string, params: Record<string, any> = {}) {
-  const { data, error } = await supabase.functions.invoke("geocmd-ai", {
-    body: { type, ...params },
-  });
-  if (error) throw error;
-  if (!data?.success) throw new Error(data?.error || "AI error");
-  return data.data;
+async function callAI(type: string, params: Record<string, any> = {}, timeoutMs = 45000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const { data, error } = await supabase.functions.invoke("geocmd-ai", {
+      body: { type, ...params },
+    });
+    if (error) throw error;
+    if (!data?.success) throw new Error(data?.error || "AI error");
+    return data.data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function parseJ(raw) {

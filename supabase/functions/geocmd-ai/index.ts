@@ -60,12 +60,13 @@ serve(async (req) => {
 
     if (type === "scenarios") {
       const raw = await callAI(
-        `Tu es un système d'intelligence géopolitique. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Tu dois te baser sur l'actualité géopolitique réelle et récente de mars 2026.`,
-        `Génère exactement 6 scénarios de crises géopolitiques ACTUELLES et RÉELLES dans le monde en ce moment (mars 2026).
-Chaque scénario doit refléter des événements réels et vérifiables.
+        `Tu es un système d'intelligence géopolitique. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Nous sommes en avril 2026. Tu dois te baser sur l'actualité géopolitique ACTUELLE ou TRÈS RÉCENTE (2025-2026). Ne propose JAMAIS de scénarios situés dans le passé (avant 2025).`,
+        `Génère exactement 6 scénarios de crises géopolitiques ACTUELLES et RÉELLES dans le monde en ce moment (avril 2026).
+RÈGLE ABSOLUE : tous les scénarios doivent se dérouler EN CE MOMENT (avril 2026) ou dans un futur très proche. AUCUN scénario ne doit référencer des dates passées (2024, 2023, etc.). Les descriptions doivent utiliser le présent, pas le passé.
+Chaque scénario doit refléter des événements réels et vérifiables de 2025-2026.
 JSON (tableau uniquement):
-[{"id":"slug-unique","title":"Titre","region":"Zone géographique","type":"conflit armé|tension diplomatique|rivalité économique|crise interne","playerRole":"Rôle du joueur","playerCountry":"Pays","description":"2 phrases factuelles basées sur l'actualité réelle de mars 2026.","urgency":4}]
-Urgency 1-5. Varie obligatoirement régions et types. Sois factuel et précis.`
+[{"id":"slug-unique","title":"Titre","region":"Zone géographique","type":"conflit armé|tension diplomatique|rivalité économique|crise interne","playerRole":"Rôle du joueur","playerCountry":"Pays","description":"2 phrases factuelles au PRÉSENT basées sur l'actualité réelle d'avril 2026.","urgency":4}]
+Urgency 1-5. Varie obligatoirement régions et types. Sois factuel et précis. Utilise le PRÉSENT dans toutes les descriptions.`
       );
       result = parseJSON(raw);
 

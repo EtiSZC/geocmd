@@ -40,12 +40,16 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url || "/";
+  const tag = event.notification.tag || "";
+
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && "focus" in client) {
+            // Tell the app which notification was tapped
+            client.postMessage({ type: "NOTIFICATION_CLICK", tag, url });
             return client.focus();
           }
         }

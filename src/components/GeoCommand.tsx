@@ -1444,60 +1444,7 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
 
       <InstallPWAButton />
 
-      {/* ── Audio settings ── */}
-      {audioManager && (() => {
-        const [ap, setAp] = useState(audioManager.getPrefs());
-        const updateAudio = (muted: boolean, volume: number) => {
-          audioManager.updatePrefs(muted, volume);
-          setAp({ muted, volume });
-        };
-        return (
-          <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
-            <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2, marginBottom:12 }}>AMBIANCE SONORE</div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-              <span style={{ fontSize:12, color:"#8a9ab8" }}>Son activé</span>
-              <button
-                onClick={() => { updateAudio(!ap.muted, ap.volume); audioManager.playSFX("click"); }}
-                style={{
-                  width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
-                  background: !ap.muted ? "#00e87a" : "#2e3e56",
-                  position:"relative", transition:"background .2s",
-                }}
-              >
-                <div style={{
-                  width:20, height:20, borderRadius:10, background:"#fff",
-                  position:"absolute", top:3,
-                  left: !ap.muted ? 25 : 3,
-                  transition:"left .2s",
-                }}/>
-              </button>
-            </div>
-            {!ap.muted && (
-              <div>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontSize:12, color:"#8a9ab8" }}>Volume</span>
-                  <span className="gc-m" style={{ fontSize:11, color:"#c8a84b" }}>{Math.round(ap.volume * 100)}%</span>
-                </div>
-                <input
-                  type="range" min="0" max="100" value={Math.round(ap.volume * 100)}
-                  onChange={e => { const v = parseInt(e.target.value) / 100; updateAudio(false, v); }}
-                  onMouseUp={() => audioManager.playSFX("click")}
-                  onTouchEnd={() => audioManager.playSFX("click")}
-                  style={{ width:"100%", accentColor:"#c8a84b" }}
-                />
-                <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-                  {(["click","transition","success","alert","error","radio","dataload","radar"] as SFXType[]).map(sfx => (
-                    <button key={sfx} className="gc-btn" onClick={() => audioManager.playSFX(sfx)}
-                      style={{ fontSize:10, padding:"5px 10px", background:"#162030", color:"#8a9ab8", border:"1px solid #2e3e56", cursor:"pointer", textTransform:"uppercase", letterSpacing:1 }}>
-                      {sfx === "click" ? "🔘" : sfx === "transition" ? "🚪" : sfx === "success" ? "✓" : sfx === "alert" ? "🚨" : sfx === "error" ? "✕" : sfx === "radio" ? "📻" : sfx === "dataload" ? "💾" : "📡"} {sfx}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {audioManager && <AudioSettings audioManager={audioManager} />}
 
       <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
         <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>

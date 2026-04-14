@@ -1510,7 +1510,6 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
   };
   const SFX_LIST: { type: SFXType; icon: string; label: string }[] = [
     { type: "click", icon: "🔘", label: "Clic" },
-    { type: "transition", icon: "🚪", label: "Transition" },
     { type: "success", icon: "✓", label: "Succès" },
     { type: "alert", icon: "🚨", label: "Alerte" },
     { type: "error", icon: "✕", label: "Erreur" },
@@ -1955,9 +1954,8 @@ export default function GeoCommand() {
   const audioManager = useAudioManager(screen as any);
   const setScreen = useCallback((s: string) => {
     window.scrollTo(0, 0);
-    if (s === "scenario-select") audioManager.playSFX("transition");
-    else if (s === "theater") audioManager.playSFX("dataload");
-    else audioManager.playSFX("transition");
+    if (s === "theater") audioManager.playSFX("dataload");
+    else audioManager.playSFX("click");
     setScreen_(s);
   }, [audioManager]);
   const [player, setPlayer]   = useState<any>(null);

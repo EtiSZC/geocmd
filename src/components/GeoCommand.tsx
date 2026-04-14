@@ -393,8 +393,20 @@ async function deleteTheater(theaterId: string) {
 }
 
 async function deletePlayerAndTheaters(playerId: string) {
+  await supabase.from("npc_relationships").delete().eq("player_id", playerId);
   await supabase.from("theaters").delete().eq("player_id", playerId);
   await supabase.from("players").delete().eq("id", playerId);
+}
+
+async function loadPlayerNPCs(playerId: string) {
+  const { data } = await supabase
+    .from("npc_relationships" as any)
+    .select("*")
+    .eq("player_id", playerId)
+    .eq("status", "active")
+    .order("trust_score", { ascending: false })
+    .limit(5);
+  return (data || []) as any[];
 }
 
 // Meta (last session) — keep in localStorage for auto-login convenience

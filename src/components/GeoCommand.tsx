@@ -1432,6 +1432,25 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
       </div>
       {!ap.muted && (
         <div>
+          {/* Ambience toggle */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <span style={{ fontSize:12, color:"#8a9ab8" }}>Ambiance sonore (hub, théâtre…)</span>
+            <button
+              onClick={() => { update({ ambienceEnabled: !ap.ambienceEnabled }); audioManager.playSFX("click"); }}
+              style={{
+                width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
+                background: ap.ambienceEnabled ? "#00e87a" : "#2e3e56",
+                position:"relative", transition:"background .2s",
+              }}
+            >
+              <div style={{
+                width:20, height:20, borderRadius:10, background:"#fff",
+                position:"absolute", top:3,
+                left: ap.ambienceEnabled ? 25 : 3,
+                transition:"left .2s",
+              }}/>
+            </button>
+          </div>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
             <span style={{ fontSize:12, color:"#8a9ab8" }}>Volume</span>
             <span className="gc-m" style={{ fontSize:11, color:"#c8a84b" }}>{Math.round(ap.volume * 100)}%</span>

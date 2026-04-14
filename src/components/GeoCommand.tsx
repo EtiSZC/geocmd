@@ -393,8 +393,20 @@ async function deleteTheater(theaterId: string) {
 }
 
 async function deletePlayerAndTheaters(playerId: string) {
+  await supabase.from("npc_relationships").delete().eq("player_id", playerId);
   await supabase.from("theaters").delete().eq("player_id", playerId);
   await supabase.from("players").delete().eq("id", playerId);
+}
+
+async function loadPlayerNPCs(playerId: string) {
+  const { data } = await supabase
+    .from("npc_relationships" as any)
+    .select("*")
+    .eq("player_id", playerId)
+    .eq("status", "active")
+    .order("trust_score", { ascending: false })
+    .limit(5);
+  return (data || []) as any[];
 }
 
 // Meta (last session) — keep in localStorage for auto-login convenience
@@ -789,7 +801,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   );
 }
 
-function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX }) {
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX, playerId }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
   const [actions, setActions] = useState(null);
@@ -817,7 +829,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
         const hctx = history.length
           ? history.slice(-3).map(h=>h.actionLabel)
           : [];
-        brief = await callAI("briefing", { scenario, history: history.slice(-3) });
+        brief = await callAI("briefing", { scenario, history: history.slice(-3), playerId });
         if (!brief || !brief.situation) brief = FB_BRIEFING(scenario);
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
@@ -826,7 +838,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
 
       let acts = null;
       try {
-        acts = await callAI("actions", { scenario, briefing: brief });
+        acts = await callAI("actions", { scenario, briefing: brief, playerId });
         if (!Array.isArray(acts)||acts.length<2) acts = FB_ACTIONS;
       } catch { acts = FB_ACTIONS; }
       if (!alive) return;
@@ -885,7 +897,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
     (async () => {
       const action = { id: lastEntry.actionId, label: lastEntry.actionLabel, outcome: "" };
       try {
-        const parsed = await callAI("consequence", { scenario, action });
+        const parsed = await callAI("consequence", { scenario, action, playerId });
         const safeConsequence = parsed?.headline && parsed?.narrative
           ? parsed
           : FB_CONSEQUENCE(scenario, action.label);
@@ -1182,6 +1194,19 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);
+  const [npcs, setNpcs] = useState<any[]>([]);
+  const [npcsLoading, setNpcsLoading] = useState(true);
+  const [profileTab, setProfileTab] = useState<"dossier"|"reseau">("dossier");
+
+  useEffect(() => {
+    if (player?.dbId) {
+      loadPlayerNPCs(player.dbId).then(d => { setNpcs(d); setNpcsLoading(false); });
+    } else { setNpcsLoading(false); }
+  }, [player?.dbId]);
+
+  const trustColor = (t: number) => t > 20 ? "#00e87a" : t < -20 ? "#ff3344" : "#ff8800";
+  const trustLabel = (t: number) => t > 20 ? "ALLIÉ" : t < -20 ? "HOSTILE" : "NEUTRE";
+
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
       <div style={{ marginBottom:24 }}>
@@ -1191,7 +1216,88 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", marginTop:3 }}>{player.email}</div>
       </div>
 
-      <ScorePanel score={player.influence_score}/>
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:0, marginBottom:20 }}>
+        {(["dossier","reseau"] as const).map(tab => (
+          <button key={tab} onClick={() => setProfileTab(tab)}
+            className="gc-m" style={{
+              flex:1, padding:"10px 0", background: profileTab === tab ? "rgba(200,168,75,0.12)" : "transparent",
+              border: `1px solid ${profileTab === tab ? "#c8a84b" : "var(--brd)"}`,
+              color: profileTab === tab ? "#c8a84b" : "#5a6a88",
+              cursor:"pointer", fontSize:11, letterSpacing:2, transition:"all .2s",
+            }}>
+            {tab === "dossier" ? "◈ DOSSIER" : "🕸 RÉSEAU"}
+          </button>
+        ))}
+      </div>
+
+      {profileTab === "reseau" ? (
+        <div className="gc-fade">
+          <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>◈ PERSONNAGES RÉCURRENTS</div>
+          {npcsLoading ? (
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>
+              <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>CHARGEMENT...</span>
+            </div>
+          ) : npcs.length === 0 ? (
+            <div className="gc-panel" style={{ padding:20, textAlign:"center" }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>🕸</div>
+              <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>AUCUN CONTACT ÉTABLI</div>
+              <p style={{ fontSize:12, color:"#3a4a5a", lineHeight:1.6 }}>
+                Vos contacts apparaîtront ici au fil de vos décisions sur les théâtres. Des conseillers, adversaires et alliés se manifesteront.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {npcs.map(npc => {
+                const interactions = Array.isArray(npc.interactions) ? npc.interactions : [];
+                const lastInt = interactions[interactions.length - 1];
+                return (
+                  <div key={npc.id} className="gc-panel" style={{ padding:16, borderLeft:`3px solid ${trustColor(npc.trust_score)}` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                      <div>
+                        <div className="gc-h" style={{ fontSize:17, fontWeight:600, color:"#dce4f0" }}>{npc.name}</div>
+                        <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1 }}>{npc.role} — {npc.faction}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div className="gc-m" style={{ fontSize:9, color: trustColor(npc.trust_score), letterSpacing:2 }}>{trustLabel(npc.trust_score)}</div>
+                        <div className="gc-h" style={{ fontSize:20, fontWeight:700, color: trustColor(npc.trust_score) }}>{npc.trust_score > 0 ? "+" : ""}{npc.trust_score}</div>
+                      </div>
+                    </div>
+                    {/* Trust bar */}
+                    <div style={{ height:4, background:"#162030", marginBottom:8, position:"relative" }}>
+                      <div style={{
+                        position:"absolute", top:0, height:"100%",
+                        left: npc.trust_score >= 0 ? "50%" : `${50 + npc.trust_score / 2}%`,
+                        width: `${Math.abs(npc.trust_score) / 2}%`,
+                        background: trustColor(npc.trust_score),
+                        transition:"all .4s",
+                      }}/>
+                      <div style={{ position:"absolute", top:-2, left:"50%", width:1, height:8, background:"#5a6a88" }}/>
+                    </div>
+                    <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:1.5, marginBottom:4 }}>
+                      ORIGINE : {npc.origin_region} — {interactions.length} INTERACTION{interactions.length !== 1 ? "S" : ""}
+                    </div>
+                    {lastInt && (
+                      <div style={{ borderTop:"1px solid var(--brd)", paddingTop:8, marginTop:6 }}>
+                        <div className="gc-m" style={{ fontSize:9, color:"#3a4a5a", letterSpacing:1 }}>DERNIÈRE INTERACTION</div>
+                        <div style={{ fontSize:12, color:"#8a9ab8", marginTop:3 }}>
+                          {lastInt.theater ? `${lastInt.theater} — ` : ""}{lastInt.action}
+                        </div>
+                        {lastInt.outcome && (
+                          <div style={{ fontSize:11, color:"#5a6a88", fontStyle:"italic", marginTop:2 }}>« {lastInt.outcome} »</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="gc-div"/>
+        </div>
+      ) : (
+        <>
+          <ScorePanel score={player.influence_score}/>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
         {[
@@ -1258,6 +1364,8 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
@@ -2038,7 +2146,7 @@ export default function GeoCommand() {
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="theater"&&activeIdx!==null&&theaters[activeIdx]&&(
-          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }} playSFX={audioManager.playSFX}/>
+          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }} playSFX={audioManager.playSFX} playerId={player?.dbId}/>
         )}
         {screen==="profile"&&(
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>

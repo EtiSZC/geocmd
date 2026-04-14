@@ -801,7 +801,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   );
 }
 
-function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX }) {
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX, playerId }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
   const [actions, setActions] = useState(null);
@@ -829,7 +829,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
         const hctx = history.length
           ? history.slice(-3).map(h=>h.actionLabel)
           : [];
-        brief = await callAI("briefing", { scenario, history: history.slice(-3) });
+        brief = await callAI("briefing", { scenario, history: history.slice(-3), playerId });
         if (!brief || !brief.situation) brief = FB_BRIEFING(scenario);
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
@@ -838,7 +838,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
 
       let acts = null;
       try {
-        acts = await callAI("actions", { scenario, briefing: brief });
+        acts = await callAI("actions", { scenario, briefing: brief, playerId });
         if (!Array.isArray(acts)||acts.length<2) acts = FB_ACTIONS;
       } catch { acts = FB_ACTIONS; }
       if (!alive) return;
@@ -897,7 +897,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
     (async () => {
       const action = { id: lastEntry.actionId, label: lastEntry.actionLabel, outcome: "" };
       try {
-        const parsed = await callAI("consequence", { scenario, action });
+        const parsed = await callAI("consequence", { scenario, action, playerId });
         const safeConsequence = parsed?.headline && parsed?.narrative
           ? parsed
           : FB_CONSEQUENCE(scenario, action.label);

@@ -1836,6 +1836,7 @@ export default function GeoCommand() {
   }, [player]);
 
   const handleLogin = useCallback(async (p: any) => {
+    audioManager.playSFX("success");
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }
     const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id, influence_score: (dbPlayer as any).influence_score || DEFAULT_SCORE };
@@ -1854,6 +1855,7 @@ export default function GeoCommand() {
 
   const handleAddScenario = useCallback(async (scenario: any) => {
     if (!player) return;
+    audioManager.playSFX("radio");
     const dbT = await insertTheater(player.dbId, scenario);
     if (!dbT) return;
     const newT = { dbId: dbT.id, scenario, history: [], consequence: null };
@@ -1909,6 +1911,7 @@ export default function GeoCommand() {
 
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
+    audioManager.playSFX("alert");
     const result = await respondToFlashEvent(eventId, player.dbId, option);
     if (result) {
       setRespondedFlashIds(prev => [...prev, eventId]);

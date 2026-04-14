@@ -1952,9 +1952,12 @@ export default function GeoCommand() {
 
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
-    audioManager.playSFX("alert");
     const result = await respondToFlashEvent(eventId, player.dbId, option);
     if (result) {
+      // Play SFX based on outcome
+      if (result.outcome === "success") audioManager.playSFX("success");
+      else if (result.outcome === "partial") audioManager.playSFX("alert");
+      else if (result.outcome === "failure") audioManager.playSFX("error");
       setRespondedFlashIds(prev => [...prev, eventId]);
       // Apply actual (risk-modified) deltas
       if (result.actualDeltas) {

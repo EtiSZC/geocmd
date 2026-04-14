@@ -574,7 +574,7 @@ export function useAudioManager(screen: ScreenType) {
     if (master && ctx) {
       try { master.gain.linearRampToValueAtTime(newPrefs.muted ? 0 : newPrefs.volume, ctx.currentTime + 0.1); } catch {}
     }
-    if (newPrefs.muted) {
+    if (newPrefs.muted || !newPrefs.ambienceEnabled) {
       stopAmbience();
     } else if (!masterRef.current || masterRef.current.gain.value === 0) {
       startAmbience(currentScreenRef.current);

@@ -1457,7 +1457,7 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
               <span style={{ fontSize:12, color:"#8a9ab8" }}>Son activé</span>
               <button
-                onClick={() => { audioManager.updatePrefs(!ap.muted, ap.volume); audioManager.playSFX("click"); }}
+                onClick={() => { updateAudio(!ap.muted, ap.volume); audioManager.playSFX("click"); }}
                 style={{
                   width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
                   background: !ap.muted ? "#00e87a" : "#2e3e56",

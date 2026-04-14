@@ -457,7 +457,7 @@ function playDataLoad(ctx: AudioContext, vol: number) {
 
 
 // ─── Hook ────────────────────────────────────────────────────
-export type SFXType = "click" | "transition" | "success" | "alert" | "error" | "radio" | "dataload";
+export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload";
 
 export function useAudioManager(screen: ScreenType) {
   const ctxRef = useRef<AudioContext | null>(null);

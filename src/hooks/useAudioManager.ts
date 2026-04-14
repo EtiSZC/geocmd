@@ -524,7 +524,7 @@ export function useAudioManager(screen: ScreenType) {
 
   const startAmbience = useCallback((scr: string) => {
     const prefs = prefsRef.current;
-    if (prefs.muted) { stopAmbience(); return; }
+    if (prefs.muted || !prefs.ambienceEnabled) { stopAmbience(); return; }
     const builder = AMBIENCE_BUILDERS[scr];
     if (!builder) { stopAmbience(); return; }
     const ctx = ensureCtx();

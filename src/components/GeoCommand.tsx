@@ -1762,6 +1762,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
     if (result) {
       const narrativeMsg = playerRole ? getRandomReaction(playerRole, result.outcome) : null;
       setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option, narrativeMsg });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       // Trigger follow-up event generation in background
       supabase.functions.invoke("flash-followup", {
         body: { parent_event_id: eventId, parent_option: option, player_id: playerId, risk_outcome: result.outcome },

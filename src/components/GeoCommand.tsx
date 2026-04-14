@@ -1789,7 +1789,8 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
 export default function GeoCommand() {
   useEffect(() => injectStyles(), []);
   const [screen, setScreen_]   = useState("init");
-  const setScreen = useCallback((s: string) => { window.scrollTo(0, 0); setScreen_(s); }, []);
+  const audioManager = useAudioManager(screen as any);
+  const setScreen = useCallback((s: string) => { window.scrollTo(0, 0); audioManager.playSFX("transition"); setScreen_(s); }, [audioManager]);
   const [player, setPlayer]   = useState<any>(null);
   const [theaters, setTheaters] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState<number|null>(null);

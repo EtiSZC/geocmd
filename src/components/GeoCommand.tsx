@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAudioManager, getAudioPrefs, saveAudioPrefs, type SFXType } from "@/hooks/useAudioManager";
+import { useAudioManager, type SFXType, type AudioPrefs } from "@/hooks/useAudioManager";
 
 const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
 
@@ -1386,19 +1386,36 @@ function InstallPWAButton() {
     </div>
   );
 }
-function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (muted: boolean, volume: number) => void; getPrefs: () => { muted: boolean; volume: number }; playSFX: (t: SFXType) => void } }) {
-  const [ap, setAp] = useState(audioManager.getPrefs());
-  const updateAudio = (muted: boolean, volume: number) => {
-    audioManager.updatePrefs(muted, volume);
-    setAp({ muted, volume });
+function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: AudioPrefs) => void; getPrefs: () => AudioPrefs; playSFX: (t: SFXType) => void } }) {
+  const [ap, setAp] = useState<AudioPrefs>(audioManager.getPrefs());
+  const update = (patch: Partial<AudioPrefs>) => {
+    const next = { ...ap, ...patch };
+    audioManager.updatePrefs(next);
+    setAp(next);
   };
+  const toggleSfx = (sfx: string) => {
+    const disabled = ap.disabledSfx.includes(sfx)
+      ? ap.disabledSfx.filter(s => s !== sfx)
+      : [...ap.disabledSfx, sfx];
+    update({ disabledSfx: disabled });
+  };
+  const SFX_LIST: { type: SFXType; icon: string; label: string }[] = [
+    { type: "click", icon: "🔘", label: "Clic" },
+    { type: "transition", icon: "🚪", label: "Transition" },
+    { type: "success", icon: "✓", label: "Succès" },
+    { type: "alert", icon: "🚨", label: "Alerte" },
+    { type: "error", icon: "✕", label: "Erreur" },
+    { type: "radio", icon: "📻", label: "Radio" },
+    { type: "dataload", icon: "💾", label: "Données" },
+    { type: "radar", icon: "📡", label: "Radar" },
+  ];
   return (
     <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
       <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2, marginBottom:12 }}>AMBIANCE SONORE</div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
         <span style={{ fontSize:12, color:"#8a9ab8" }}>Son activé</span>
         <button
-          onClick={() => { updateAudio(!ap.muted, ap.volume); audioManager.playSFX("click"); }}
+          onClick={() => { update({ muted: !ap.muted }); audioManager.playSFX("click"); }}
           style={{
             width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
             background: !ap.muted ? "#00e87a" : "#2e3e56",
@@ -1421,25 +1438,40 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (muted: 
           </div>
           <input
             type="range" min="0" max="100" value={Math.round(ap.volume * 100)}
-            onChange={e => { const v = parseInt(e.target.value) / 100; updateAudio(false, v); }}
-            onMouseUp={() => audioManager.playSFX("click")}
-            onTouchEnd={() => audioManager.playSFX("click")}
+            onChange={e => update({ volume: parseInt(e.target.value) / 100 })}
             style={{ width:"100%", accentColor:"#c8a84b" }}
           />
-          <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-            {(["click","transition","success","alert","error","radio","dataload","radar"] as SFXType[]).map(sfx => (
-              <button key={sfx} className="gc-btn" onClick={() => audioManager.playSFX(sfx)}
-                style={{ fontSize:10, padding:"5px 10px", background:"#162030", color:"#8a9ab8", border:"1px solid #2e3e56", cursor:"pointer", textTransform:"uppercase", letterSpacing:1 }}>
-                {sfx === "click" ? "🔘" : sfx === "transition" ? "🚪" : sfx === "success" ? "✓" : sfx === "alert" ? "🚨" : sfx === "error" ? "✕" : sfx === "radio" ? "📻" : sfx === "dataload" ? "💾" : "📡"} {sfx}
-              </button>
-            ))}
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:2, marginTop:16, marginBottom:8 }}>EFFETS SONORES</div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {SFX_LIST.map(sfx => {
+              const disabled = ap.disabledSfx.includes(sfx.type);
+              return (
+                <button key={sfx.type} className="gc-btn"
+                  onClick={() => {
+                    if (!disabled) audioManager.playSFX(sfx.type);
+                    toggleSfx(sfx.type);
+                  }}
+                  style={{
+                    fontSize:10, padding:"5px 10px",
+                    background: disabled ? "#0d1520" : "#162030",
+                    color: disabled ? "#3a4a5a" : "#8a9ab8",
+                    border: `1px solid ${disabled ? "#1a2535" : "#2e3e56"}`,
+                    cursor:"pointer", textTransform:"uppercase", letterSpacing:1,
+                    opacity: disabled ? 0.5 : 1,
+                    textDecoration: disabled ? "line-through" : "none",
+                  }}>
+                  {sfx.icon} {sfx.label}
+                </button>
+              );
+            })}
           </div>
+          <p style={{ fontSize:10, color:"#3a4a5a", marginTop:8, margin:0 }}>Cliquez pour activer/désactiver chaque effet.</p>
         </div>
       )}
     </div>
   );
 }
-function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (muted: boolean, volume: number) => void; getPrefs: () => { muted: boolean; volume: number }; playSFX: (t: SFXType) => void } }) {
+function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (p: AudioPrefs) => void; getPrefs: () => AudioPrefs; playSFX: (t: SFXType) => void } }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
   const toggle = async (key: "flash" | "theater" | "community") => {

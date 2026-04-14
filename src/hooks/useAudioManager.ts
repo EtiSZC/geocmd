@@ -2,13 +2,14 @@ import { useEffect, useRef, useCallback } from "react";
 
 // ─── Audio preference persistence ────────────────────────────
 const AUDIO_KEY = "geocmd_audio";
-export function getAudioPrefs() {
+export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; }
+export function getAudioPrefs(): AudioPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");
-    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5 };
-  } catch { return { muted: false, volume: 0.5 }; }
+    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5, disabledSfx: Array.isArray(v.disabledSfx) ? v.disabledSfx : [] };
+  } catch { return { muted: false, volume: 0.5, disabledSfx: [] }; }
 }
-export function saveAudioPrefs(p: { muted: boolean; volume: number }) {
+export function saveAudioPrefs(p: AudioPrefs) {
   localStorage.setItem(AUDIO_KEY, JSON.stringify(p));
 }
 
@@ -547,6 +548,7 @@ export function useAudioManager(screen: ScreenType) {
   const playSFX = useCallback((type: SFXType) => {
     const prefs = prefsRef.current;
     if (prefs.muted) return;
+    if (prefs.disabledSfx.includes(type)) return;
     const ctx = ensureCtx();
     if (!ctx) return;
     if (ctx.state === "suspended") ctx.resume();
@@ -563,12 +565,18 @@ export function useAudioManager(screen: ScreenType) {
     }
   }, [ensureCtx]);
 
-  const updatePrefs = useCallback((muted: boolean, volume: number) => {
-    prefsRef.current = { muted, volume };
-    saveAudioPrefs({ muted, volume });
-    if (muted) {
+  const updatePrefs = useCallback((newPrefs: AudioPrefs) => {
+    prefsRef.current = newPrefs;
+    saveAudioPrefs(newPrefs);
+    // Apply volume change to live ambience
+    const master = masterRef.current;
+    const ctx = ctxRef.current;
+    if (master && ctx) {
+      try { master.gain.linearRampToValueAtTime(newPrefs.muted ? 0 : newPrefs.volume, ctx.currentTime + 0.1); } catch {}
+    }
+    if (newPrefs.muted) {
       stopAmbience();
-    } else {
+    } else if (!masterRef.current || masterRef.current.gain.value === 0) {
       startAmbience(currentScreenRef.current);
     }
   }, [startAmbience, stopAmbience]);

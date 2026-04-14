@@ -1482,10 +1482,10 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
                   style={{ width:"100%", accentColor:"#c8a84b" }}
                 />
                 <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
-                  {(["click","transition","success","alert","error","radio"] as SFXType[]).map(sfx => (
+                  {(["click","transition","success","alert","error","radio","dataload","radar"] as SFXType[]).map(sfx => (
                     <button key={sfx} className="gc-btn" onClick={() => audioManager.playSFX(sfx)}
                       style={{ fontSize:10, padding:"5px 10px", background:"#162030", color:"#8a9ab8", border:"1px solid #2e3e56", cursor:"pointer", textTransform:"uppercase", letterSpacing:1 }}>
-                      {sfx === "click" ? "🔘" : sfx === "transition" ? "🔄" : sfx === "success" ? "✓" : sfx === "alert" ? "⚠" : sfx === "error" ? "✕" : "📻"} {sfx}
+                      {sfx === "click" ? "🔘" : sfx === "transition" ? "🚪" : sfx === "success" ? "✓" : sfx === "alert" ? "🚨" : sfx === "error" ? "✕" : sfx === "radio" ? "📻" : sfx === "dataload" ? "💾" : "📡"} {sfx}
                     </button>
                   ))}
                 </div>

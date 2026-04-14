@@ -1471,7 +1471,7 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
     </div>
   );
 }
-function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (muted: boolean, volume: number) => void; getPrefs: () => { muted: boolean; volume: number }; playSFX: (t: SFXType) => void } }) {
+function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (p: AudioPrefs) => void; getPrefs: () => AudioPrefs; playSFX: (t: SFXType) => void } }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
   const toggle = async (key: "flash" | "theater" | "community") => {

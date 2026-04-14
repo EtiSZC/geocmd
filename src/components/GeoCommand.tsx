@@ -1977,7 +1977,7 @@ export default function GeoCommand() {
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>
         )}
         {screen==="settings"&&(
-          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")}/>
+          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")} audioManager={audioManager}/>
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>

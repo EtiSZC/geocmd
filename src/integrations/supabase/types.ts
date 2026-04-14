@@ -122,6 +122,66 @@ export type Database = {
           },
         ]
       }
+      npc_relationships: {
+        Row: {
+          created_at: string
+          faction: string
+          id: string
+          interactions: Json
+          name: string
+          origin_region: string
+          origin_theater_id: string | null
+          player_id: string
+          role: string
+          status: string
+          trust_score: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          faction: string
+          id?: string
+          interactions?: Json
+          name: string
+          origin_region: string
+          origin_theater_id?: string | null
+          player_id: string
+          role: string
+          status?: string
+          trust_score?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          faction?: string
+          id?: string
+          interactions?: Json
+          name?: string
+          origin_region?: string
+          origin_theater_id?: string | null
+          player_id?: string
+          role?: string
+          status?: string
+          trust_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "npc_relationships_origin_theater_id_fkey"
+            columns: ["origin_theater_id"]
+            isOneToOne: false
+            referencedRelation: "theaters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_relationships_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           callsign: string

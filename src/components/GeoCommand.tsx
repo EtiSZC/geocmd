@@ -1516,7 +1516,7 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
     { type: "error", icon: "✕", label: "Erreur" },
     { type: "radio", icon: "📻", label: "Radio" },
     { type: "dataload", icon: "💾", label: "Données" },
-    { type: "radar", icon: "📡", label: "Radar" },
+    
   ];
   return (
     <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
@@ -1955,7 +1955,7 @@ export default function GeoCommand() {
   const audioManager = useAudioManager(screen as any);
   const setScreen = useCallback((s: string) => {
     window.scrollTo(0, 0);
-    if (s === "scenario-select") audioManager.playSFX("radar");
+    if (s === "scenario-select") audioManager.playSFX("transition");
     else if (s === "theater") audioManager.playSFX("dataload");
     else audioManager.playSFX("transition");
     setScreen_(s);

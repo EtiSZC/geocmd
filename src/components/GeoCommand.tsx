@@ -1480,7 +1480,7 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
                 </div>
                 <input
                   type="range" min="0" max="100" value={Math.round(ap.volume * 100)}
-                  onChange={e => { const v = parseInt(e.target.value) / 100; audioManager.updatePrefs(false, v); }}
+                  onChange={e => { const v = parseInt(e.target.value) / 100; updateAudio(false, v); }}
                   onMouseUp={() => audioManager.playSFX("click")}
                   onTouchEnd={() => audioManager.playSFX("click")}
                   style={{ width:"100%", accentColor:"#c8a84b" }}

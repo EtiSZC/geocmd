@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAudioManager, getAudioPrefs, saveAudioPrefs, type SFXType } from "@/hooks/useAudioManager";
 
 const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
 
@@ -1386,7 +1387,7 @@ function InstallPWAButton() {
   );
 }
 
-function SettingsScreen({ playerId, onBack }) {
+function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (muted: boolean, volume: number) => void; getPrefs: () => { muted: boolean; volume: number }; playSFX: (t: SFXType) => void } }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
   const toggle = async (key: "flash" | "theater" | "community") => {
@@ -1442,6 +1443,57 @@ function SettingsScreen({ playerId, onBack }) {
       <TestPushButton playerId={playerId} />
 
       <InstallPWAButton />
+
+      {/* ── Audio settings ── */}
+      {audioManager && (() => {
+        const ap = audioManager.getPrefs();
+        return (
+          <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
+            <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2, marginBottom:12 }}>AMBIANCE SONORE</div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <span style={{ fontSize:12, color:"#8a9ab8" }}>Son activé</span>
+              <button
+                onClick={() => { audioManager.updatePrefs(!ap.muted, ap.volume); audioManager.playSFX("click"); }}
+                style={{
+                  width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
+                  background: !ap.muted ? "#00e87a" : "#2e3e56",
+                  position:"relative", transition:"background .2s",
+                }}
+              >
+                <div style={{
+                  width:20, height:20, borderRadius:10, background:"#fff",
+                  position:"absolute", top:3,
+                  left: !ap.muted ? 25 : 3,
+                  transition:"left .2s",
+                }}/>
+              </button>
+            </div>
+            {!ap.muted && (
+              <div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:"#8a9ab8" }}>Volume</span>
+                  <span className="gc-m" style={{ fontSize:11, color:"#c8a84b" }}>{Math.round(ap.volume * 100)}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="100" value={Math.round(ap.volume * 100)}
+                  onChange={e => { const v = parseInt(e.target.value) / 100; audioManager.updatePrefs(false, v); }}
+                  onMouseUp={() => audioManager.playSFX("click")}
+                  onTouchEnd={() => audioManager.playSFX("click")}
+                  style={{ width:"100%", accentColor:"#c8a84b" }}
+                />
+                <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                  {(["click","transition","success","alert","error","radio"] as SFXType[]).map(sfx => (
+                    <button key={sfx} className="gc-btn" onClick={() => audioManager.playSFX(sfx)}
+                      style={{ fontSize:10, padding:"5px 10px", background:"#162030", color:"#8a9ab8", border:"1px solid #2e3e56", cursor:"pointer", textTransform:"uppercase", letterSpacing:1 }}>
+                      {sfx === "click" ? "🔘" : sfx === "transition" ? "🔄" : sfx === "success" ? "✓" : sfx === "alert" ? "⚠" : sfx === "error" ? "✕" : "📻"} {sfx}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
         <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>
@@ -1737,7 +1789,8 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
 export default function GeoCommand() {
   useEffect(() => injectStyles(), []);
   const [screen, setScreen_]   = useState("init");
-  const setScreen = useCallback((s: string) => { window.scrollTo(0, 0); setScreen_(s); }, []);
+  const audioManager = useAudioManager(screen as any);
+  const setScreen = useCallback((s: string) => { window.scrollTo(0, 0); audioManager.playSFX("transition"); setScreen_(s); }, [audioManager]);
   const [player, setPlayer]   = useState<any>(null);
   const [theaters, setTheaters] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState<number|null>(null);
@@ -1783,6 +1836,7 @@ export default function GeoCommand() {
   }, [player]);
 
   const handleLogin = useCallback(async (p: any) => {
+    audioManager.playSFX("success");
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }
     const playerObj = { callsign: dbPlayer.callsign, email: dbPlayer.email, dbId: dbPlayer.id, influence_score: (dbPlayer as any).influence_score || DEFAULT_SCORE };
@@ -1801,6 +1855,7 @@ export default function GeoCommand() {
 
   const handleAddScenario = useCallback(async (scenario: any) => {
     if (!player) return;
+    audioManager.playSFX("radio");
     const dbT = await insertTheater(player.dbId, scenario);
     if (!dbT) return;
     const newT = { dbId: dbT.id, scenario, history: [], consequence: null };
@@ -1856,6 +1911,7 @@ export default function GeoCommand() {
 
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
+    audioManager.playSFX("alert");
     const result = await respondToFlashEvent(eventId, player.dbId, option);
     if (result) {
       setRespondedFlashIds(prev => [...prev, eventId]);
@@ -1924,7 +1980,7 @@ export default function GeoCommand() {
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>
         )}
         {screen==="settings"&&(
-          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")}/>
+          <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")} audioManager={audioManager}/>
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>

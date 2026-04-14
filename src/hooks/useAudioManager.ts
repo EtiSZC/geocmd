@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 
 // ─── Audio preference persistence ────────────────────────────
 const AUDIO_KEY = "geocmd_audio";
-export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; }
+export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; ambienceEnabled: boolean; }
 export function getAudioPrefs(): AudioPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");

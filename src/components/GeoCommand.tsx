@@ -1341,7 +1341,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         ))
       )}
       <div className="gc-div"/>
-      <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onSettings}>▸ PARAMÈTRES NOTIFICATIONS</button>
+      <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onSettings}>▸ PARAMÈTRES SONS & NOTIFICATIONS</button>
       <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onCommunity}>▸ OPÉRATEURS EN LIGNE</button>
       {!confirming ? (
         <button className="gc-btn danger" onClick={() => setConfirming(true)}>

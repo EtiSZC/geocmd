@@ -2,13 +2,14 @@ import { useEffect, useRef, useCallback } from "react";
 
 // ─── Audio preference persistence ────────────────────────────
 const AUDIO_KEY = "geocmd_audio";
-export function getAudioPrefs() {
+export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; }
+export function getAudioPrefs(): AudioPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");
-    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5 };
-  } catch { return { muted: false, volume: 0.5 }; }
+    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5, disabledSfx: Array.isArray(v.disabledSfx) ? v.disabledSfx : [] };
+  } catch { return { muted: false, volume: 0.5, disabledSfx: [] }; }
 }
-export function saveAudioPrefs(p: { muted: boolean; volume: number }) {
+export function saveAudioPrefs(p: AudioPrefs) {
   localStorage.setItem(AUDIO_KEY, JSON.stringify(p));
 }
 

@@ -283,31 +283,6 @@ function playClick(ctx: AudioContext, vol: number) {
   o2.start(now); o2.stop(now + 0.07);
 }
 
-// Screen transition: hydraulic door / heavy switch
-function playTransition(ctx: AudioContext, vol: number) {
-  const now = ctx.currentTime;
-  // Hydraulic hiss
-  const ns = ctx.createBufferSource();
-  ns.buffer = createNoise(ctx, 1);
-  const bp = ctx.createBiquadFilter();
-  bp.type = "bandpass"; bp.frequency.value = 3000; bp.Q.value = 1;
-  bp.frequency.exponentialRampToValueAtTime(800, now + 0.4);
-  const ng = ctx.createGain();
-  ng.gain.setValueAtTime(vol * 0.12, now);
-  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-  ns.connect(bp).connect(ng).connect(ctx.destination);
-  ns.start(now); ns.stop(now + 0.55);
-  // Heavy clunk
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.type = "sine";
-  o.frequency.setValueAtTime(80, now + 0.05);
-  o.frequency.exponentialRampToValueAtTime(40, now + 0.2);
-  g.gain.setValueAtTime(vol * 0.18, now + 0.05);
-  g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-  o.connect(g).connect(ctx.destination);
-  o.start(now + 0.05); o.stop(now + 0.35);
-}
 
 // Success: ascending military confirmation tones
 function playSuccess(ctx: AudioContext, vol: number) {
@@ -457,7 +432,7 @@ function playDataLoad(ctx: AudioContext, vol: number) {
 
 
 // ─── Hook ────────────────────────────────────────────────────
-export type SFXType = "click" | "transition" | "success" | "alert" | "error" | "radio" | "dataload";
+export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload";
 
 export function useAudioManager(screen: ScreenType) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -528,7 +503,6 @@ export function useAudioManager(screen: ScreenType) {
     const v = prefs.volume;
     switch (type) {
       case "click": playClick(ctx, v); break;
-      case "transition": playTransition(ctx, v); break;
       case "success": playSuccess(ctx, v); break;
       case "alert": playAlert(ctx, v); break;
       case "error": playError(ctx, v); break;
@@ -583,7 +557,7 @@ export function useAudioManager(screen: ScreenType) {
       stopAmbience();
       return;
     }
-    playSFX("transition");
+    playSFX("click");
     startAmbience(screen);
   }, [screen, startAmbience, stopAmbience, playSFX]);
 

@@ -121,19 +121,21 @@ serve(async (req) => {
 
     const outcomeLabel = risk_outcome === "success" ? "un succès total" : risk_outcome === "partial" ? "un succès partiel" : "un échec";
 
-    const aiResp = await fetch(AI_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Tu génères des événements de suivi (ondes de choc) qui sont les conséquences directes d'une décision précédente.`,
-          },
-          {
-            role: "user",
-            content: `Contexte : Le joueur a fait face à la crise "${parentEvent.title}" (${parentEvent.region}, ${parentEvent.event_type}).
+    let parsed;
+    try {
+      const aiResp = await fetch(AI_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Tu génères des événements de suivi (ondes de choc) qui sont les conséquences directes d'une décision précédente.`,
+            },
+            {
+              role: "user",
+              content: `Contexte : Le joueur a fait face à la crise "${parentEvent.title}" (${parentEvent.region}, ${parentEvent.event_type}).
 Description : ${parentEvent.description}
 Il a choisi l'action "${parent_option.label}" (${parent_option.cat}, risque ${parent_option.risk}).
 Le résultat a été ${outcomeLabel}.
@@ -143,23 +145,26 @@ Génère un événement de suivi (onde de choc) qui est la conséquence DIRECTE 
 JSON: {"title":"Titre court avec ⚡ ONDE DE CHOC","description":"Description en 2-3 phrases expliquant la conséquence.","region":"${parentEvent.region}","event_type":"militaire|diplomatique|économique|humanitaire","urgency":3,"options":[{"id":"opt1","label":"Action 1","desc":"Description","cat":"militaire|diplomatique|économique|renseignement","risk":"faible|modéré|élevé","scoreDeltas":{"stability":0,"diplomacy":0,"military":0,"intelligence":0}},{"id":"opt2","label":"Action 2","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}},{"id":"opt3","label":"Action 3","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}}]}
 
 Urgency 3-5. Exactement 3 options. scoreDeltas entre -10 et +10.`,
-          },
-        ],
-      }),
-    });
+            },
+          ],
+        }),
+      });
 
-    if (!aiResp.ok) throw new Error(`AI error ${aiResp.status}`);
+      if (!aiResp.ok) {
+        const errText = await aiResp.text();
+        console.error("AI service error:", aiResp.status, errText);
+        throw new Error(`AI error ${aiResp.status}`);
+      }
 
-    const aiData = await aiResp.json();
-    const raw = aiData.choices?.[0]?.message?.content || "";
-    let parsed;
-    try {
+      const aiData = await aiResp.json();
+      const raw = aiData.choices?.[0]?.message?.content || "";
       const m = raw.match(/```(?:json)?\n?([\s\S]*?)\n?```/) || raw.match(/(\{[\s\S]*?\})/s);
       parsed = JSON.parse(m ? m[1] : raw);
-    } catch {
+    } catch (aiErr) {
+      console.error("AI fallback triggered:", aiErr);
       parsed = {
-        title: "⚡ Onde de choc — Répercussions",
-        description: `Suite à votre décision concernant "${parentEvent.title}", de nouvelles tensions émergent dans la région.`,
+        title: "⚡ ONDE DE CHOC — Répercussions",
+        description: `Suite à votre décision concernant "${parentEvent.title}", de nouvelles tensions émergent dans la région ${parentEvent.region}.`,
         region: parentEvent.region,
         event_type: parentEvent.event_type,
         urgency: 4,
@@ -170,7 +175,6 @@ Urgency 3-5. Exactement 3 options. scoreDeltas entre -10 et +10.`,
         ],
       };
     }
-
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
     const { data: followUp, error: insertErr } = await sb.from("flash_events").insert({
       title: parsed.title,

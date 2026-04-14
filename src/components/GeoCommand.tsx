@@ -1446,7 +1446,11 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
 
       {/* ── Audio settings ── */}
       {audioManager && (() => {
-        const ap = audioManager.getPrefs();
+        const [ap, setAp] = useState(audioManager.getPrefs());
+        const updateAudio = (muted: boolean, volume: number) => {
+          audioManager.updatePrefs(muted, volume);
+          setAp({ muted, volume });
+        };
         return (
           <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
             <div className="gc-m" style={{ fontSize:11, color:"#c8a84b", letterSpacing:2, marginBottom:12 }}>AMBIANCE SONORE</div>

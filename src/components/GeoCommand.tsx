@@ -789,7 +789,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   );
 }
 
-function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop }) {
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
   const [actions, setActions] = useState(null);
@@ -822,6 +822,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop }) 
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
       setBriefing(brief);
+      if (playSFX) playSFX("dataload");
 
       let acts = null;
       try {
@@ -1432,6 +1433,25 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
       </div>
       {!ap.muted && (
         <div>
+          {/* Ambience toggle */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <span style={{ fontSize:12, color:"#8a9ab8" }}>Ambiance sonore (hub, théâtre…)</span>
+            <button
+              onClick={() => { update({ ambienceEnabled: !ap.ambienceEnabled }); audioManager.playSFX("click"); }}
+              style={{
+                width:48, height:26, borderRadius:13, border:"none", cursor:"pointer",
+                background: ap.ambienceEnabled ? "#00e87a" : "#2e3e56",
+                position:"relative", transition:"background .2s",
+              }}
+            >
+              <div style={{
+                width:20, height:20, borderRadius:10, background:"#fff",
+                position:"absolute", top:3,
+                left: ap.ambienceEnabled ? 25 : 3,
+                transition:"left .2s",
+              }}/>
+            </button>
+          </div>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
             <span style={{ fontSize:12, color:"#8a9ab8" }}>Volume</span>
             <span className="gc-m" style={{ fontSize:11, color:"#c8a84b" }}>{Math.round(ap.volume * 100)}%</span>
@@ -2018,7 +2038,7 @@ export default function GeoCommand() {
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
         )}
         {screen==="theater"&&activeIdx!==null&&theaters[activeIdx]&&(
-          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }}/>
+          <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }} playSFX={audioManager.playSFX}/>
         )}
         {screen==="profile"&&(
           <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>

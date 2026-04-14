@@ -2,12 +2,12 @@ import { useEffect, useRef, useCallback } from "react";
 
 // ─── Audio preference persistence ────────────────────────────
 const AUDIO_KEY = "geocmd_audio";
-export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; }
+export interface AudioPrefs { muted: boolean; volume: number; disabledSfx: string[]; ambienceEnabled: boolean; }
 export function getAudioPrefs(): AudioPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(AUDIO_KEY) || "{}");
-    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5, disabledSfx: Array.isArray(v.disabledSfx) ? v.disabledSfx : [] };
-  } catch { return { muted: false, volume: 0.5, disabledSfx: [] }; }
+    return { muted: v.muted === true, volume: typeof v.volume === "number" ? v.volume : 0.5, disabledSfx: Array.isArray(v.disabledSfx) ? v.disabledSfx : [], ambienceEnabled: v.ambienceEnabled !== false };
+  } catch { return { muted: false, volume: 0.5, disabledSfx: [], ambienceEnabled: true }; }
 }
 export function saveAudioPrefs(p: AudioPrefs) {
   localStorage.setItem(AUDIO_KEY, JSON.stringify(p));
@@ -524,7 +524,7 @@ export function useAudioManager(screen: ScreenType) {
 
   const startAmbience = useCallback((scr: string) => {
     const prefs = prefsRef.current;
-    if (prefs.muted) { stopAmbience(); return; }
+    if (prefs.muted || !prefs.ambienceEnabled) { stopAmbience(); return; }
     const builder = AMBIENCE_BUILDERS[scr];
     if (!builder) { stopAmbience(); return; }
     const ctx = ensureCtx();
@@ -574,7 +574,7 @@ export function useAudioManager(screen: ScreenType) {
     if (master && ctx) {
       try { master.gain.linearRampToValueAtTime(newPrefs.muted ? 0 : newPrefs.volume, ctx.currentTime + 0.1); } catch {}
     }
-    if (newPrefs.muted) {
+    if (newPrefs.muted || !newPrefs.ambienceEnabled) {
       stopAmbience();
     } else if (!masterRef.current || masterRef.current.gain.value === 0) {
       startAmbience(currentScreenRef.current);

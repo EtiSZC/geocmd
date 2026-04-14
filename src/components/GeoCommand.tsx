@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAudioManager, getAudioPrefs, saveAudioPrefs, type SFXType } from "@/hooks/useAudioManager";
 
 const VAPID_PUBLIC_KEY = "BH4pO72nfLseaBl-9cvw1mNqpg6HcRPNDwrrS1-qiZiFZrJB9ikMCxwot-AKrPt_Lz089a99rdhwq3c2H7kpnng";
 
@@ -1386,7 +1387,7 @@ function InstallPWAButton() {
   );
 }
 
-function SettingsScreen({ playerId, onBack }) {
+function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (muted: boolean, volume: number) => void; getPrefs: () => { muted: boolean; volume: number }; playSFX: (t: SFXType) => void } }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
   const toggle = async (key: "flash" | "theater" | "community") => {

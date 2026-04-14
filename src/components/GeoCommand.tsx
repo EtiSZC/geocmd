@@ -822,6 +822,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
       } catch { brief = FB_BRIEFING(scenario); }
       if (!alive) return;
       setBriefing(brief);
+      if (playSFX) playSFX("dataload");
 
       let acts = null;
       try {

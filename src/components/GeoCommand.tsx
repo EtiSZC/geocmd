@@ -1365,6 +1365,8 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
   );
 }

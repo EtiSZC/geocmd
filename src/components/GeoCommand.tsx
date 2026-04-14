@@ -1993,6 +1993,36 @@ export default function GeoCommand() {
     })();
   }, []);
 
+  // Listen for notification clicks from Service Worker
+  useEffect(() => {
+    if (!player) return;
+    const handler = async (evt: MessageEvent) => {
+      if (evt.data?.type === "NOTIFICATION_CLICK") {
+        const tag: string = evt.data.tag || "";
+        // Flash or shockwave → go to hub and refresh flash events
+        if (tag.startsWith("flash-") || tag.startsWith("shockwave-")) {
+          const fe = await loadActiveFlashEvents(player.dbId);
+          setFlashEvents(fe);
+          const responded = await loadPlayerFlashResponses(player.dbId);
+          setRespondedFlashIds(responded);
+          setScreen("hub");
+        }
+        // Theater ready → go to hub and refresh theaters
+        else if (tag.startsWith("theater-ready-")) {
+          const t = await loadTheaters(player.dbId);
+          setTheaters(t);
+          setScreen("hub");
+        }
+        // Community or other → just go to hub
+        else {
+          setScreen("hub");
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", handler);
+    return () => navigator.serviceWorker?.removeEventListener("message", handler);
+  }, [player]);
+
   // Refresh flash events every 60s
   useEffect(() => {
     if (!player) return;

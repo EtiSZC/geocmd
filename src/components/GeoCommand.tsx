@@ -1861,7 +1861,7 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
             animation: "fadeUp .35s ease forwards",
           }}>
             <div
-              onClick={() => { setSel(isOpen ? null : ev.id); setSelOption(null); }}
+              onClick={() => { const opening = !isOpen; setSel(opening ? ev.id : null); setSelOption(null); if (opening) window.scrollTo({ top: 0, behavior: "smooth" }); }}
               style={{ padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
             >
               <div style={{ flex: 1 }}>

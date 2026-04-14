@@ -455,36 +455,9 @@ function playDataLoad(ctx: AudioContext, vol: number) {
   oh.start(now); oh.stop(now + 0.55);
 }
 
-// Radar ping: classic sonar/radar sweep
-function playRadarPing(ctx: AudioContext, vol: number) {
-  const now = ctx.currentTime;
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  const f = ctx.createBiquadFilter();
-  o.type = "sine";
-  o.frequency.value = 1400;
-  f.type = "bandpass"; f.frequency.value = 1400; f.Q.value = 20;
-  g.gain.setValueAtTime(0, now);
-  g.gain.linearRampToValueAtTime(vol * 0.15, now + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-  o.connect(f).connect(g).connect(ctx.destination);
-  o.start(now); o.stop(now + 1.3);
-  // Echo / reverb tail via delayed copies
-  [0.15, 0.35].forEach(delay => {
-    const oe = ctx.createOscillator();
-    const ge = ctx.createGain();
-    oe.type = "sine"; oe.frequency.value = 1400;
-    const t = now + delay;
-    ge.gain.setValueAtTime(0, t);
-    ge.gain.linearRampToValueAtTime(vol * 0.04, t + 0.005);
-    ge.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    oe.connect(f).connect(ge).connect(ctx.destination);
-    oe.start(t); oe.stop(t + 0.55);
-  });
-}
 
 // ─── Hook ────────────────────────────────────────────────────
-export type SFXType = "click" | "transition" | "success" | "alert" | "error" | "radio" | "dataload" | "radar";
+export type SFXType = "click" | "transition" | "success" | "alert" | "error" | "radio" | "dataload";
 
 export function useAudioManager(screen: ScreenType) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -561,7 +534,6 @@ export function useAudioManager(screen: ScreenType) {
       case "error": playError(ctx, v); break;
       case "radio": playRadioStatic(ctx, v); break;
       case "dataload": playDataLoad(ctx, v); break;
-      case "radar": playRadarPing(ctx, v); break;
     }
   }, [ensureCtx]);
 

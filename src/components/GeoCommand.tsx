@@ -2323,6 +2323,18 @@ export default function GeoCommand() {
     };
   }, [player, refreshFlashState]);
 
+  // Poll theater-notify every 5 minutes to trigger push notifications for ready theaters
+  useEffect(() => {
+    if (!player) return;
+    const checkTheaterNotify = () => {
+      supabase.functions.invoke("theater-notify").catch(() => {});
+    };
+    // Check immediately on login
+    checkTheaterNotify();
+    const iv = setInterval(checkTheaterNotify, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [player]);
+
   const handleLogin = useCallback(async (p: any) => {
     audioManager.playSFX("success");
     const dbPlayer = await upsertPlayer(p.email, p.callsign);

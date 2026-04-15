@@ -375,6 +375,7 @@ async function loadTheaters(playerId: string) {
     scenario: t.scenario as any,
     history: (t.history as any) || [],
     consequence: t.consequence as any,
+    dossier: (t as any).dossier as any,
   }));
 }
 
@@ -387,7 +388,7 @@ async function insertTheater(playerId: string, scenario: any) {
   return data;
 }
 
-async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any; notified_ready?: boolean }) {
+async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any; notified_ready?: boolean; dossier?: any }) {
   await supabase.from("theaters").update(updates).eq("id", theaterId);
 }
 
@@ -825,7 +826,72 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
     </div>
   );
 }
-
+function DossierPanel({ dossier }: { dossier: any }) {
+  const [open, setOpen] = useState(false);
+  if (!dossier?.title) return null;
+  return (
+    <div style={{ marginBottom:20 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="gc-panel"
+        style={{ width:"100%", padding:"14px 18px", cursor:"pointer", border:"1px solid rgba(200,168,75,0.25)", background: open ? "rgba(200,168,75,0.08)" : "rgba(200,168,75,0.03)", textAlign:"left", transition:"all .2s" }}
+      >
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div className="gc-m" style={{ fontSize:9, color:"#c8a84b", letterSpacing:3, marginBottom:4 }}>📂 DOSSIER DÉCLASSIFIÉ</div>
+            <div className="gc-h" style={{ fontSize:14, fontWeight:600, color:"#dce4f0" }}>{dossier.title}</div>
+          </div>
+          <span style={{ fontSize:16, color:"#c8a84b", transition:"transform .2s", transform: open ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+        </div>
+      </button>
+      {open && (
+        <div className="gc-fade" style={{ border:"1px solid rgba(200,168,75,0.15)", borderTop:"none", padding:"18px 16px", background:"rgba(10,16,26,0.6)" }}>
+          {dossier.realContext && (
+            <div style={{ marginBottom:16 }}>
+              <div className="gc-m" style={{ fontSize:9, color:"#c8a84b", letterSpacing:2.5, marginBottom:6 }}>◈ CONTEXTE RÉEL</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.7 }}>{dossier.realContext}</p>
+            </div>
+          )}
+          {Array.isArray(dossier.keyFigures) && dossier.keyFigures.length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2.5, marginBottom:8 }}>◈ PERSONNAGES CLÉS</div>
+              {dossier.keyFigures.map((f: any, i: number) => (
+                <div key={i} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom: i < dossier.keyFigures.length-1 ? "1px solid #162030" : "none" }}>
+                  <span className="gc-m" style={{ color:"#c8a84b", fontSize:10, flexShrink:0 }}>●</span>
+                  <div>
+                    <div style={{ fontSize:13, color:"#dce4f0", fontWeight:600 }}>{f.name}</div>
+                    <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{f.role}</div>
+                    <div style={{ fontSize:12, color:"#8a9ab8", marginTop:2 }}>{f.significance}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {dossier.hiddenStakes && (
+            <div style={{ borderLeft:"3px solid #ff8800", paddingLeft:14, marginBottom:16 }}>
+              <div className="gc-m" style={{ fontSize:9, color:"#ff8800", letterSpacing:2.5, marginBottom:6 }}>◈ ENJEUX CACHÉS</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{dossier.hiddenStakes}</p>
+            </div>
+          )}
+          {dossier.historicalParallel && (
+            <div style={{ borderLeft:"3px solid #4d8eff", paddingLeft:14, marginBottom:16 }}>
+              <div className="gc-m" style={{ fontSize:9, color:"#4d8eff", letterSpacing:2.5, marginBottom:6 }}>◈ PARALLÈLE HISTORIQUE</div>
+              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{dossier.historicalParallel}</p>
+            </div>
+          )}
+          {Array.isArray(dossier.sources) && dossier.sources.length > 0 && (
+            <div>
+              <div className="gc-m" style={{ fontSize:9, color:"#2e3e56", letterSpacing:2, marginBottom:6 }}>SOURCES</div>
+              {dossier.sources.map((s: string, i: number) => (
+                <div key={i} className="gc-m" style={{ fontSize:10, color:"#3a4a5a", padding:"2px 0" }}>— {s}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX, playerId }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
@@ -989,6 +1055,11 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
               )}
             </div>
           </div>
+        )}
+
+        {/* Dossier déclassifié */}
+        {theater.dossier && (
+          <DossierPanel dossier={theater.dossier} />
         )}
 
         {/* Pending consequence — waiting for 5h delay */}
@@ -1221,7 +1292,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   const [confirming, setConfirming] = useState(false);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [npcsLoading, setNpcsLoading] = useState(true);
-  const [profileTab, setProfileTab] = useState<"dossier"|"reseau">("dossier");
+  const [profileTab, setProfileTab] = useState<"dossier"|"reseau"|"dossiers_secrets">("dossier");
 
   useEffect(() => {
     if (player?.dbId) {
@@ -1243,20 +1314,45 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:20 }}>
-        {(["dossier","reseau"] as const).map(tab => (
+        {(["dossier","dossiers_secrets","reseau"] as const).map(tab => (
           <button key={tab} onClick={() => setProfileTab(tab)}
             className="gc-m" style={{
               flex:1, padding:"10px 0", background: profileTab === tab ? "rgba(200,168,75,0.12)" : "transparent",
               border: `1px solid ${profileTab === tab ? "#c8a84b" : "var(--brd)"}`,
               color: profileTab === tab ? "#c8a84b" : "#5a6a88",
-              cursor:"pointer", fontSize:11, letterSpacing:2, transition:"all .2s",
+              cursor:"pointer", fontSize:10, letterSpacing:1.5, transition:"all .2s",
             }}>
-            {tab === "dossier" ? "◈ DOSSIER" : "🕸 RÉSEAU"}
+            {tab === "dossier" ? "◈ DOSSIER" : tab === "dossiers_secrets" ? "📂 SECRETS" : "🕸 RÉSEAU"}
           </button>
         ))}
       </div>
 
-      {profileTab === "reseau" ? (
+      {profileTab === "dossiers_secrets" ? (
+        <div className="gc-fade">
+          <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>📂 DOSSIERS DÉCLASSIFIÉS</div>
+          {(() => {
+            const dossiersWithTheater = theaters.filter(t => t.dossier?.title);
+            if (dossiersWithTheater.length === 0) return (
+              <div className="gc-panel" style={{ padding:20, textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>📂</div>
+                <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>AUCUN DOSSIER DISPONIBLE</div>
+                <p style={{ fontSize:12, color:"#3a4a5a", lineHeight:1.6 }}>
+                  Des dossiers déclassifiés apparaîtront ici après chaque cycle complet de théâtre (briefing → action → conséquence).
+                </p>
+              </div>
+            );
+            return dossiersWithTheater.map((t, i) => (
+              <div key={i} style={{ marginBottom:16 }}>
+                <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>
+                  {t.scenario?.title?.toUpperCase()}
+                </div>
+                <DossierPanel dossier={t.dossier} />
+              </div>
+            ));
+          })()}
+          <div className="gc-div"/>
+        </div>
+      ) : profileTab === "reseau" ? (
         <div className="gc-fade">
           <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>◈ PERSONNAGES RÉCURRENTS</div>
           {npcsLoading ? (
@@ -2125,14 +2221,14 @@ export default function GeoCommand() {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         if (consequence !== null) {
-          const newConsequence = consequence;
-          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          const { dossier: dossierData, ...newConsequence } = consequence;
+          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence, ...(dossierData ? { dossier: dossierData } : {}) });
           if (consequence.scoreDeltas && player) {
             const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, consequence.scoreDeltas);
             setPlayer(prev => ({ ...prev, influence_score: newScore }));
             if (player.dbId) updatePlayerScore(player.dbId, newScore);
           }
-          return { ...t, consequence: newConsequence };
+          return { ...t, consequence: newConsequence, ...(dossierData ? { dossier: dossierData } : {}) };
         } else {
           const today = fmtDate();
           const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];

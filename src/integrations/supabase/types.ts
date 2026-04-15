@@ -251,6 +251,7 @@ export type Database = {
         Row: {
           consequence: Json | null
           created_at: string
+          dossier: Json | null
           history: Json
           id: string
           notified_ready: boolean
@@ -261,6 +262,7 @@ export type Database = {
         Insert: {
           consequence?: Json | null
           created_at?: string
+          dossier?: Json | null
           history?: Json
           id?: string
           notified_ready?: boolean
@@ -271,6 +273,7 @@ export type Database = {
         Update: {
           consequence?: Json | null
           created_at?: string
+          dossier?: Json | null
           history?: Json
           id?: string
           notified_ready?: boolean

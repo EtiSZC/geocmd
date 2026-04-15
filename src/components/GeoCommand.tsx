@@ -1314,15 +1314,15 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:20 }}>
-        {(["dossier","reseau"] as const).map(tab => (
+        {(["dossier","dossiers_secrets","reseau"] as const).map(tab => (
           <button key={tab} onClick={() => setProfileTab(tab)}
             className="gc-m" style={{
               flex:1, padding:"10px 0", background: profileTab === tab ? "rgba(200,168,75,0.12)" : "transparent",
               border: `1px solid ${profileTab === tab ? "#c8a84b" : "var(--brd)"}`,
               color: profileTab === tab ? "#c8a84b" : "#5a6a88",
-              cursor:"pointer", fontSize:11, letterSpacing:2, transition:"all .2s",
+              cursor:"pointer", fontSize:10, letterSpacing:1.5, transition:"all .2s",
             }}>
-            {tab === "dossier" ? "◈ DOSSIER" : "🕸 RÉSEAU"}
+            {tab === "dossier" ? "◈ DOSSIER" : tab === "dossiers_secrets" ? "📂 SECRETS" : "🕸 RÉSEAU"}
           </button>
         ))}
       </div>

@@ -1990,6 +1990,13 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
     setSubmitting(true);
     const result = await onRespond(eventId, option);
     setSubmitting(false);
+
+    if ((result as any)?.alreadyResponded) {
+      setSel(null);
+      setSelOption(null);
+      return;
+    }
+
     if (result) {
       const narrativeMsg = playerRole ? getRandomReaction(playerRole, result.outcome) : null;
       setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option, narrativeMsg });

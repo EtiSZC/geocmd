@@ -1292,7 +1292,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   const [confirming, setConfirming] = useState(false);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [npcsLoading, setNpcsLoading] = useState(true);
-  const [profileTab, setProfileTab] = useState<"dossier"|"reseau">("dossier");
+  const [profileTab, setProfileTab] = useState<"dossier"|"reseau"|"dossiers_secrets">("dossier");
 
   useEffect(() => {
     if (player?.dbId) {

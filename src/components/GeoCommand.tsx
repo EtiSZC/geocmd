@@ -2078,7 +2078,21 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               </div>
             </div>
 
-            {isOpen && !expired && (
+            {isOpen && !expired && isFollowUp && (
+              <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>
+                <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
+                <div className="gc-m" style={{ fontSize: 10, color: urgencyColor(ev.urgency), letterSpacing: 2, marginBottom: 10 }}>◈ RAPPORT D'ONDE DE CHOC</div>
+                <button
+                  className="gc-btn full"
+                  style={{ marginTop: 4 }}
+                  onClick={() => onDismiss(ev.id)}
+                >
+                  ✕ FERMER
+                </button>
+              </div>
+            )}
+
+            {isOpen && !expired && !isFollowUp && (
               <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>
                 <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
                 <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", letterSpacing: 2, marginBottom: 10 }}>◈ RÉPONSE RAPIDE</div>
@@ -2117,15 +2131,6 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
                     onClick={() => handleConfirm(ev.id, selOption)}
                   >
                     {submitting ? "ANALYSE EN COURS..." : "▸ CONFIRMER LA RÉPONSE"}
-                  </button>
-                )}
-                {isFollowUp && !selOption && (
-                  <button
-                    className="gc-btn full"
-                    style={{ marginTop: 12, background: "transparent", border: "1px solid var(--brd)", color: "#5a6a88" }}
-                    onClick={() => onDismiss(ev.id)}
-                  >
-                    ✕ IGNORER L'ONDE DE CHOC
                   </button>
                 )}
               </div>

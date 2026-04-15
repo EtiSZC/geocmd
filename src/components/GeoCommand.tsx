@@ -1327,7 +1327,32 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         ))}
       </div>
 
-      {profileTab === "reseau" ? (
+      {profileTab === "dossiers_secrets" ? (
+        <div className="gc-fade">
+          <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>📂 DOSSIERS DÉCLASSIFIÉS</div>
+          {(() => {
+            const dossiersWithTheater = theaters.filter(t => t.dossier?.title);
+            if (dossiersWithTheater.length === 0) return (
+              <div className="gc-panel" style={{ padding:20, textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>📂</div>
+                <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>AUCUN DOSSIER DISPONIBLE</div>
+                <p style={{ fontSize:12, color:"#3a4a5a", lineHeight:1.6 }}>
+                  Des dossiers déclassifiés apparaîtront ici après chaque cycle complet de théâtre (briefing → action → conséquence).
+                </p>
+              </div>
+            );
+            return dossiersWithTheater.map((t, i) => (
+              <div key={i} style={{ marginBottom:16 }}>
+                <div className="gc-m" style={{ fontSize:9, color:"#5a6a88", letterSpacing:2, marginBottom:6 }}>
+                  {t.scenario?.title?.toUpperCase()}
+                </div>
+                <DossierPanel dossier={t.dossier} />
+              </div>
+            ));
+          })()}
+          <div className="gc-div"/>
+        </div>
+      ) : profileTab === "reseau" ? (
         <div className="gc-fade">
           <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>◈ PERSONNAGES RÉCURRENTS</div>
           {npcsLoading ? (

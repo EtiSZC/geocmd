@@ -1135,7 +1135,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
             </div>
             <div style={{ borderLeft:"3px solid #c8a84b", paddingLeft:16, marginBottom:20 }}>
               <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ APPRÉCIATION DU RENSEIGNEMENT</div>
-              <p className="text-base font-sans font-thin" style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{briefing.assessment}</p>
+              <p className="text-base font-sans font-bold" style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{briefing.assessment}</p>
             </div>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>

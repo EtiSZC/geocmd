@@ -186,7 +186,21 @@ serve(async (req) => {
     const { action, force } = await req.json().catch(() => ({ action: "generate", force: false }));
 
     if (action === "generate") {
-      if (!force && Math.random() > 0.167) {
+      // Enforce 4-hour cooldown: skip if a non-followup event was created in the last 4 hours
+      const { data: recent } = await sb
+        .from("flash_events")
+        .select("id")
+        .is("parent_event_id", null)
+        .gt("created_at", new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString())
+        .limit(1);
+
+      if (!force && recent && recent.length > 0) {
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: "Cooldown 4h — un event existe déjà" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!force && Math.random() > 0.5) {
         return new Response(JSON.stringify({ success: true, skipped: true, reason: "Random roll — no event this time" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

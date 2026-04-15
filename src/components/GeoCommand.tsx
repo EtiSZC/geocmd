@@ -1581,9 +1581,28 @@ function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
 
+function useIsStandalone() {
+  const [standalone, setStandalone] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(display-mode: standalone)");
+    const handler = (e: MediaQueryListEvent) => setStandalone(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return standalone;
+}
+
+function useIsIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
 function InstallPWAButton() {
   const [canInstall, setCanInstall] = useState(false);
   const [installed, setInstalled] = useState(false);
+  const isStandalone = useIsStandalone();
+  const isIOS = useIsIOS();
   useEffect(() => {
     const check = () => setCanInstall(!!(window as any).__getPWAInstallPrompt?.());
     check();
@@ -1598,9 +1617,17 @@ function InstallPWAButton() {
     const result = await prompt.userChoice;
     if (result.outcome === "accepted") { setInstalled(true); setCanInstall(false); }
   };
-  if (installed) return (
+  if (isStandalone || installed) return (
     <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
       <div className="gc-m" style={{ fontSize:11, color:"#00e87a", letterSpacing:2 }}>✓ APPLICATION INSTALLÉE</div>
+    </div>
+  );
+  if (isIOS) return (
+    <div className="gc-panel" style={{ padding:18, marginTop:14, marginBottom:14 }}>
+      <div className="gc-m" style={{ fontSize:11, color:"#4d8eff", letterSpacing:2, marginBottom:8 }}>INSTALLATION</div>
+      <p style={{ fontSize:12, color:"#5a6a88", lineHeight:1.5, margin:0 }}>
+        Appuyez sur <span style={{ color:"#c8a84b" }}>Partager</span> (⎋) puis <span style={{ color:"#c8a84b" }}>"Sur l'écran d'accueil"</span> pour installer GeoCommand.
+      </p>
     </div>
   );
   if (!canInstall) return null;
@@ -1614,6 +1641,52 @@ function InstallPWAButton() {
         style={{ background:"#4d8eff", color:"#fff", border:"none", padding:"10px 20px", fontSize:12, letterSpacing:2, cursor:"pointer", width:"100%" }}>
         📲 INSTALLER L'APPLICATION
       </button>
+    </div>
+  );
+}
+
+function HubInstallBanner() {
+  const isStandalone = useIsStandalone();
+  const isIOS = useIsIOS();
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("gc_install_dismissed") === "1");
+  const [canInstall, setCanInstall] = useState(!!(window as any).__getPWAInstallPrompt?.());
+
+  useEffect(() => {
+    const check = () => setCanInstall(!!(window as any).__getPWAInstallPrompt?.());
+    window.addEventListener("pwa-install-available", check);
+    window.addEventListener("pwa-install-done", () => setDismissed(true));
+    return () => window.removeEventListener("pwa-install-available", check);
+  }, []);
+
+  if (isStandalone || dismissed) return null;
+  if (!canInstall && !isIOS) return null;
+
+  const handleDismiss = () => { localStorage.setItem("gc_install_dismissed", "1"); setDismissed(true); };
+  const handleInstall = async () => {
+    const prompt = (window as any).__getPWAInstallPrompt?.();
+    if (!prompt) return;
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    if (result.outcome === "accepted") setDismissed(true);
+  };
+
+  return (
+    <div style={{ marginTop:24, background:"var(--surf)", border:"1px solid var(--brd)", padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
+      <div style={{ flex:1 }}>
+        <div className="gc-m" style={{ fontSize:10, color:"#4d8eff", letterSpacing:2, marginBottom:4 }}>📲 INSTALLER GEOCOMMAND</div>
+        {isIOS ? (
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>Partager (⎋) → "Sur l'écran d'accueil"</div>
+        ) : (
+          <div className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>Accès direct depuis votre écran d'accueil</div>
+        )}
+      </div>
+      {!isIOS && (
+        <button className="gc-btn" onClick={handleInstall}
+          style={{ background:"#4d8eff", color:"#fff", border:"none", padding:"8px 14px", fontSize:10, letterSpacing:1, cursor:"pointer", whiteSpace:"nowrap" }}>
+          INSTALLER
+        </button>
+      )}
+      <button onClick={handleDismiss} style={{ background:"none", border:"none", color:"#2e3e56", cursor:"pointer", fontSize:16, padding:4 }}>✕</button>
     </div>
   );
 }

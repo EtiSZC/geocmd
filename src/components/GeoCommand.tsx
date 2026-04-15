@@ -1916,6 +1916,26 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const [outcomeOverlay, setOutcomeOverlay] = useState<{ eventId: string; outcome: string; actualDeltas: any; option: any; narrativeMsg?: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [parentResponses, setParentResponses] = useState<Record<string, any>>({});
+
+  // Load parent response data for follow-up (shockwave) events
+  useEffect(() => {
+    const followUps = active.filter((e: any) => e.parent_event_id && !parentResponses[e.parent_event_id]);
+    if (followUps.length === 0) return;
+    (async () => {
+      for (const ev of followUps) {
+        const { data } = await supabase
+          .from("flash_event_responses")
+          .select("actual_deltas, risk_outcome, chosen_option")
+          .eq("event_id", ev.parent_event_id)
+          .eq("player_id", playerId)
+          .single();
+        if (data) {
+          setParentResponses(prev => ({ ...prev, [ev.parent_event_id]: data }));
+        }
+      }
+    })();
+  }, [active.length, playerId]);
 
   // Detect primary player role from theaters — use roleId if available, else fuzzy-match playerRole
   const playerRole = (() => {
@@ -2078,19 +2098,57 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
               </div>
             </div>
 
-            {isOpen && !expired && isFollowUp && (
-              <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>
-                <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
-                <div className="gc-m" style={{ fontSize: 10, color: urgencyColor(ev.urgency), letterSpacing: 2, marginBottom: 10 }}>◈ RAPPORT D'ONDE DE CHOC</div>
-                <button
-                  className="gc-btn full"
-                  style={{ marginTop: 4 }}
-                  onClick={() => onDismiss(ev.id)}
-                >
-                  ✕ FERMER
-                </button>
-              </div>
-            )}
+            {isOpen && !expired && isFollowUp && (() => {
+              const parentResp = parentResponses[(ev as any).parent_event_id];
+              const deltas = parentResp?.actual_deltas || {};
+              const outcomeKey = parentResp?.risk_outcome;
+              const outcomeInfo = outcomeKey ? (OUTCOME_LABELS as any)[outcomeKey] : null;
+              const chosenLabel = parentResp?.chosen_option?.label;
+              return (
+                <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>
+                  <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.65, marginBottom: 14 }}>{ev.description}</p>
+
+                  {/* Impact summary from parent decision */}
+                  {parentResp && (
+                    <div style={{ border: "1px solid var(--brd2)", background: "var(--surf)", padding: "12px 14px", marginBottom: 14 }}>
+                      <div className="gc-m" style={{ fontSize: 9, color: "#5a6a88", letterSpacing: 2, marginBottom: 8 }}>◈ IMPACT DE VOTRE DÉCISION</div>
+                      {chosenLabel && (
+                        <div className="gc-m" style={{ fontSize: 10, color: "#8a9ab8", marginBottom: 6 }}>
+                          Action : <span className="gc-h" style={{ color: "var(--gold)" }}>{chosenLabel}</span>
+                        </div>
+                      )}
+                      {outcomeInfo && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                          <span style={{ fontSize: 16 }}>{outcomeInfo.icon}</span>
+                          <span className="gc-h" style={{ fontSize: 13, fontWeight: 700, color: outcomeInfo.color, letterSpacing: 1 }}>{outcomeInfo.label}</span>
+                        </div>
+                      )}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                        {Object.entries(deltas).map(([key, val]: [string, any]) => {
+                          const label = SCORE_LABELS[key as keyof typeof SCORE_LABELS] || key;
+                          const color = val > 0 ? "#00e87a" : val < 0 ? "#ff3344" : "#5a6a88";
+                          return (
+                            <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", background: `${color}0a`, border: `1px solid ${color}22` }}>
+                              <span className="gc-m" style={{ fontSize: 9, letterSpacing: 1 }}>{label}</span>
+                              <span className="gc-h" style={{ fontSize: 12, fontWeight: 700, color }}>{val > 0 ? "+" : ""}{Math.round(val)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="gc-m" style={{ fontSize: 10, color: urgencyColor(ev.urgency), letterSpacing: 2, marginBottom: 10 }}>◈ RAPPORT D'ONDE DE CHOC</div>
+                  <button
+                    className="gc-btn full"
+                    style={{ marginTop: 4 }}
+                    onClick={() => onDismiss(ev.id)}
+                  >
+                    ✕ FERMER
+                  </button>
+                </div>
+              );
+            })()}
 
             {isOpen && !expired && !isFollowUp && (
               <div style={{ padding: "0 16px 16px", animation: "fadeUp .25s ease forwards" }}>

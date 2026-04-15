@@ -1146,7 +1146,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
             </div>
             {!actionsReady ? (
               <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0" }}>
-                <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>GÉNÉRATION DES OPTIONS D'ACTION...</span>
+                <span className="gc-dot"/><span className="gc-m" style={{ fontSize:12, color:"#00e87a", letterSpacing:2 }}>GÉNÉRATION DES OPTIONS D'ACTION...</span>
               </div>
             ) : (
               <button className="gc-btn full" onClick={()=>setPhase("actions")}>▸ CHOISIR UNE ACTION</button>

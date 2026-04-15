@@ -431,8 +431,33 @@ function playDataLoad(ctx: AudioContext, vol: number) {
 }
 
 
+// Keyboard typing burst: rapid mechanical key presses
+function playTyping(ctx: AudioContext, vol: number) {
+  const now = ctx.currentTime;
+  const keyCount = 3 + Math.floor(Math.random() * 3); // 3-5 rapid keys
+  for (let i = 0; i < keyCount; i++) {
+    const t = now + i * 0.045 + Math.random() * 0.015;
+    // Key strike: short noise burst
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.025, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let s = 0; s < data.length; s++) data[s] = (Math.random() * 2 - 1) * Math.exp(-s / (data.length * 0.15));
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 2000 + Math.random() * 2000;
+    bp.Q.value = 2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol * (0.06 + Math.random() * 0.04), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+    src.connect(bp).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t + 0.03);
+  }
+}
+
+
 // ─── Hook ────────────────────────────────────────────────────
-export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload";
+export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload" | "typing";
 
 export function useAudioManager(screen: ScreenType) {
   const ctxRef = useRef<AudioContext | null>(null);
@@ -508,6 +533,7 @@ export function useAudioManager(screen: ScreenType) {
       case "error": playError(ctx, v); break;
       case "radio": playRadioStatic(ctx, v); break;
       case "dataload": playDataLoad(ctx, v); break;
+      case "typing": playTyping(ctx, v); break;
     }
   }, [ensureCtx]);
 

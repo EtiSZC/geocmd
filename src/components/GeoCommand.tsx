@@ -2126,14 +2126,14 @@ export default function GeoCommand() {
       const updated = prev.map((t, i) => {
         if (i !== index) return t;
         if (consequence !== null) {
-          const newConsequence = consequence;
-          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence });
+          const { dossier: dossierData, ...newConsequence } = consequence;
+          if (t.dbId) updateTheater(t.dbId, { history: t.history, consequence: newConsequence, ...(dossierData ? { dossier: dossierData } : {}) });
           if (consequence.scoreDeltas && player) {
             const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, consequence.scoreDeltas);
             setPlayer(prev => ({ ...prev, influence_score: newScore }));
             if (player.dbId) updatePlayerScore(player.dbId, newScore);
           }
-          return { ...t, consequence: newConsequence };
+          return { ...t, consequence: newConsequence, ...(dossierData ? { dossier: dossierData } : {}) };
         } else {
           const today = fmtDate();
           const newHistory = [...t.history, { date: today, actionLabel: action.label, actionId: action.id, decided_at: new Date().toISOString() }];

@@ -55,7 +55,16 @@ async function loadPlayerFlashResponses(playerId: string) {
     .from("flash_event_responses")
     .select("event_id")
     .eq("player_id", playerId);
-  return (data || []).map(r => r.event_id);
+  return Array.from(new Set((data || []).map((r) => r.event_id)));
+}
+
+async function loadFlashState(playerId?: string) {
+  if (!playerId) return { events: [], respondedIds: [] as string[] };
+  const [events, respondedIds] = await Promise.all([
+    loadActiveFlashEvents(playerId),
+    loadPlayerFlashResponses(playerId),
+  ]);
+  return { events, respondedIds };
 }
 
 // Risk roll: returns "success" | "partial" | "failure" based on option risk
@@ -183,7 +192,13 @@ async function respondToFlashEvent(eventId: string, playerId: string, option: an
     risk_outcome: outcome,
     actual_deltas: actualDeltas as any,
   });
-  if (error) return null;
+  if (error) {
+    const errorText = `${error.code || ""} ${error.message || ""} ${error.details || ""}`.toLowerCase();
+    const isDuplicate = error.code === "23505" || errorText.includes("duplicate") || errorText.includes("already exists");
+    if (isDuplicate) return { alreadyResponded: true };
+    console.warn("Flash response failed:", error);
+    return null;
+  }
   return { outcome, actualDeltas };
 }
 
@@ -1975,6 +1990,13 @@ function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss
     setSubmitting(true);
     const result = await onRespond(eventId, option);
     setSubmitting(false);
+
+    if ((result as any)?.alreadyResponded) {
+      setSel(null);
+      setSelOption(null);
+      return;
+    }
+
     if (result) {
       const narrativeMsg = playerRole ? getRandomReaction(playerRole, result.outcome) : null;
       setOutcomeOverlay({ eventId, outcome: result.outcome, actualDeltas: result.actualDeltas, option, narrativeMsg });
@@ -2226,6 +2248,14 @@ export default function GeoCommand() {
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
 
+  const refreshFlashState = useCallback(async (playerId?: string) => {
+    const resolvedPlayerId = playerId || player?.dbId;
+    if (!resolvedPlayerId) return;
+    const { events, respondedIds } = await loadFlashState(resolvedPlayerId);
+    setFlashEvents(events);
+    setRespondedFlashIds(respondedIds);
+  }, [player?.dbId]);
+
   // Bootstrap: restore last session from Supabase
   useEffect(() => {
     (async () => {
@@ -2237,12 +2267,7 @@ export default function GeoCommand() {
             setPlayer({ callsign: p.callsign, email: p.email, dbId: p.id, influence_score: (p as any).influence_score || DEFAULT_SCORE });
             const t = await loadTheaters(p.id);
             setTheaters(t);
-            // Load flash events
-            const fe = await loadActiveFlashEvents(p.id);
-            setFlashEvents(fe);
-            const responded = await loadPlayerFlashResponses(p.id);
-            setRespondedFlashIds(responded);
-            // Subscribe to push
+            await refreshFlashState(p.id);
             subscribeToPush(p.id);
             setScreen("hub");
             return;
@@ -2251,7 +2276,7 @@ export default function GeoCommand() {
       } catch {}
       setScreen("login");
     })();
-  }, []);
+  }, [refreshFlashState]);
 
   // Listen for notification clicks from Service Worker
   useEffect(() => {
@@ -2261,10 +2286,7 @@ export default function GeoCommand() {
         const tag: string = evt.data.tag || "";
         // Flash or shockwave → go to hub and refresh flash events
         if (tag.startsWith("flash-") || tag.startsWith("shockwave-")) {
-          const fe = await loadActiveFlashEvents(player.dbId);
-          setFlashEvents(fe);
-          const responded = await loadPlayerFlashResponses(player.dbId);
-          setRespondedFlashIds(responded);
+          await refreshFlashState(player.dbId);
           setScreen("hub");
         }
         // Theater ready → go to hub and refresh theaters
@@ -2281,29 +2303,25 @@ export default function GeoCommand() {
     };
     navigator.serviceWorker?.addEventListener("message", handler);
     return () => navigator.serviceWorker?.removeEventListener("message", handler);
-  }, [player]);
+  }, [player, refreshFlashState]);
 
   // Realtime subscription for flash events + fallback polling every 60s
   useEffect(() => {
     if (!player) return;
-    const refreshFlash = async () => {
-      const fe = await loadActiveFlashEvents(player.dbId);
-      setFlashEvents(fe);
-      const responded = await loadPlayerFlashResponses(player.dbId);
-      setRespondedFlashIds(responded.map((r: any) => r.event_id));
-    };
     const channel = supabase
       .channel('flash-events-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'flash_events' }, () => {
-        refreshFlash();
+        refreshFlashState(player.dbId);
       })
       .subscribe();
-    const iv = setInterval(refreshFlash, 60000);
+    const iv = setInterval(() => {
+      refreshFlashState(player.dbId);
+    }, 60000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(iv);
     };
-  }, [player]);
+  }, [player, refreshFlashState]);
 
   const handleLogin = useCallback(async (p: any) => {
     audioManager.playSFX("success");
@@ -2314,14 +2332,10 @@ export default function GeoCommand() {
     setPlayer(playerObj);
     setTheaters(t);
     svMeta({ email: p.email });
-    // Load flash events + subscribe to push
-    const fe = await loadActiveFlashEvents(dbPlayer.id);
-    setFlashEvents(fe);
-    const responded = await loadPlayerFlashResponses(dbPlayer.id);
-    setRespondedFlashIds(responded);
+    await refreshFlashState(dbPlayer.id);
     subscribeToPush(dbPlayer.id);
     setScreen("hub");
-  }, []);
+  }, [audioManager, refreshFlashState, setScreen]);
 
   const handleAddScenario = useCallback(async (scenario: any) => {
     if (!player) return;
@@ -2382,12 +2396,16 @@ export default function GeoCommand() {
   const handleFlashRespond = useCallback(async (eventId: string, option: any) => {
     if (!player) return;
     const result = await respondToFlashEvent(eventId, player.dbId, option);
+    if ((result as any)?.alreadyResponded) {
+      setRespondedFlashIds(prev => Array.from(new Set([...prev, eventId])));
+      return { alreadyResponded: true };
+    }
     if (result) {
       // Play SFX based on outcome
       if (result.outcome === "success") audioManager.playSFX("success");
       else if (result.outcome === "partial") audioManager.playSFX("alert");
       else if (result.outcome === "failure") audioManager.playSFX("error");
-      setRespondedFlashIds(prev => [...prev, eventId]);
+      setRespondedFlashIds(prev => Array.from(new Set([...prev, eventId])));
       // Apply actual (risk-modified) deltas
       if (result.actualDeltas) {
         const newScore = applyDeltas(player.influence_score || DEFAULT_SCORE, result.actualDeltas);
@@ -2398,7 +2416,7 @@ export default function GeoCommand() {
       return result;
     }
     return null;
-  }, [player]);
+  }, [audioManager, player]);
 
   const handleReset = useCallback(async () => {
     if (player?.dbId) await deletePlayerAndTheaters(player.dbId);

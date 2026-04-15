@@ -2024,14 +2024,26 @@ export default function GeoCommand() {
     return () => navigator.serviceWorker?.removeEventListener("message", handler);
   }, [player]);
 
-  // Refresh flash events every 60s
+  // Realtime subscription for flash events + fallback polling every 60s
   useEffect(() => {
     if (!player) return;
-    const iv = setInterval(async () => {
+    const refreshFlash = async () => {
       const fe = await loadActiveFlashEvents(player.dbId);
       setFlashEvents(fe);
-    }, 60000);
-    return () => clearInterval(iv);
+      const responded = await loadPlayerFlashResponses(player.dbId);
+      setRespondedIds(new Set(responded.map((r: any) => r.event_id)));
+    };
+    const channel = supabase
+      .channel('flash-events-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'flash_events' }, () => {
+        refreshFlash();
+      })
+      .subscribe();
+    const iv = setInterval(refreshFlash, 60000);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(iv);
+    };
   }, [player]);
 
   const handleLogin = useCallback(async (p: any) => {

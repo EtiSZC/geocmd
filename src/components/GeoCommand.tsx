@@ -552,10 +552,7 @@ function Header({ player, theaters, onProfile }) {
         )}
       </div>
       {player && (
-        <button onClick={onProfile} style={{ background:"transparent", border:"1px solid #162030", cursor:"pointer", fontFamily:"Share Tech Mono", fontSize:11, color:"#5a6a88", padding:"5px 12px", display:"flex", alignItems:"center", gap:6, transition:"all .2s" }}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#c8a84b";e.currentTarget.style.color="#c8a84b";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#162030";e.currentTarget.style.color="#5a6a88";}}
-        >◈ {player.callsign}</button>
+        <button className="gc-btn gold" onClick={onProfile} style={{ padding:"5px 12px", fontSize:11 }}>◈ {player.callsign}</button>
       )}
     </header>
   );

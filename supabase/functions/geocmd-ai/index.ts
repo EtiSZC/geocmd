@@ -167,19 +167,26 @@ Catégories et couleurs: militaire=#ff3344, diplomatique=#00e87a, économique=#c
 
       // Load NPCs
       let npcCtx = "";
+      let npcCount = 0;
       if (playerId) {
         const npcs = await loadPlayerNPCs(playerId);
+        npcCount = npcs.length;
         npcCtx = npcContextString(npcs, scenario?.region);
       }
+
+      const needsNewNPC = npcCount < 5;
+      const npcInstructions = npcCtx
+        ? `\nIntègre les PNJ dans la narrative. Indique dans 'npcUpdates' comment chaque PNJ pertinent réagit (changement de confiance).${needsNewNPC ? " Tu DOIS aussi créer un nouveau PNJ dans 'newNPC'." : ""}`
+        : `\nTu DOIS créer un nouveau personnage (PNJ) lié à cette situation dans 'newNPC'. Ce personnage doit être réaliste, avoir un nom, un rôle et une faction.`;
 
       const raw = await callAI(
         `Tu es un système de simulation géopolitique réaliste. Réponds UNIQUEMENT en JSON valide.${npcCtx ? "\n" + npcCtx : ""}`,
         `Scénario: ${scenario.title}. Rôle: ${scenario.playerRole}.
 Action décidée: ${action.label} — ${action.desc || ""}
 Catégorie de l'action: ${action.cat || "inconnue"}
-Résultat projeté: ${action.outcome}${npcCtx ? "\nIntègre les PNJ dans la narrative. Indique dans 'npcUpdates' comment chaque PNJ pertinent réagit (changement de confiance)." : ""}
+Résultat projeté: ${action.outcome}${npcInstructions}
 Génère une conséquence réaliste et nuancée avec l'impact sur 4 indicateurs d'influence géopolitique (chaque delta entre -15 et +15, la somme ne doit PAS toujours être positive). JSON:
-{"headline":"Titre accrocheur de type dépêche","narrative":"2-3 phrases réalistes décrivant les conséquences.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}],"scoreDeltas":{"stability":5,"diplomacy":-3,"military":8,"intelligence":-2}${npcCtx ? ',"npcUpdates":[{"name":"Nom du PNJ","trustDelta":5,"reaction":"Phrase de réaction du PNJ"}],"newNPC":{"name":"Nouveau personnage si pertinent","role":"Son rôle","faction":"Son pays/org","trust_score":10}' : ''}}`
+{"headline":"Titre accrocheur de type dépêche","narrative":"2-3 phrases réalistes décrivant les conséquences.","metrics":[{"label":"Indicateur","change":"+12%","positive":true}],"scoreDeltas":{"stability":5,"diplomacy":-3,"military":8,"intelligence":-2}${npcCtx ? ',"npcUpdates":[{"name":"Nom du PNJ","trustDelta":5,"reaction":"Phrase de réaction du PNJ"}]' : ''},"newNPC":{"name":"Nom réaliste","role":"Son rôle","faction":"Son pays/org","trust_score":10}}`
       );
       result = parseJSON(raw);
 

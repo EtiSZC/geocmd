@@ -242,6 +242,8 @@ function injectStyles() {
     .gc-btn.ghost { border-color:var(--brd2); color:var(--muted); clip-path:none; font-size:12px; }
     .gc-btn.ghost:hover:not(:disabled) { border-color:var(--muted); color:var(--txt); background:transparent; }
     .gc-btn.danger { border-color:rgba(255,51,68,.4); color:var(--red); clip-path:none; }
+    .gc-btn.gold { border-color:rgba(200,168,75,0.4); color:#c8a84b; background:rgba(200,168,75,0.08); clip-path:none; }
+    .gc-btn.gold:hover:not(:disabled) { border-color:#c8a84b; color:#e8c85b; background:rgba(200,168,75,0.15); }
     .gc-btn.full { width:100%; justify-content:center; }
     .gc-input {
       background:rgba(6,8,16,.85); border:1px solid var(--brd); color:var(--txt);
@@ -693,8 +695,8 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
       {theaters.length > 0 && (
         theaters.length < MAX_THEATERS ? (
           <button
-            className="gc-btn ghost full"
-            style={{ padding:"13px", letterSpacing:2, fontSize:11, borderStyle:"dashed" }}
+            className="gc-btn gold full"
+            style={{ padding:"13px", letterSpacing:2, fontSize:11 }}
             onClick={onAddTheater}
           >
             + AJOUTER UN THÉÂTRE
@@ -782,7 +784,7 @@ function ScenarioSelect({ existingIds, onSelect, onBack }) {
   return (
     <div style={{ padding:"24px 20px", maxWidth:600, margin:"0 auto" }}>
       <div style={{ marginBottom:22 }}>
-        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+        <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
         <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>NOUVEAU THÉÂTRE</div>
         <h2 className="gc-h" style={{ fontSize:26, fontWeight:600, letterSpacing:2, marginTop:4 }}>CONFLITS ACTIFS</h2>
         <div style={{ display:"flex", alignItems:"center", gap:7, marginTop:6 }}>
@@ -945,7 +947,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <button className="gc-btn ghost" onClick={onBack}>← COMMANDEMENT</button>
+          <button className="gc-btn gold" onClick={onBack}>← COMMANDEMENT</button>
           {onDrop && (
             <button
               onClick={() => { if(confirm("Confirmez-vous le retrait de ce théâtre ? Toute progression sera perdue et le slot sera libéré.")) onDrop(); }}
@@ -1056,7 +1058,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
     const last = history[history.length-1];
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
-        <button className="gc-btn ghost" style={{ marginBottom:20 }} onClick={onBack}>← COMMANDEMENT</button>
+        <button className="gc-btn gold" style={{ marginBottom:20 }} onClick={onBack}>← COMMANDEMENT</button>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
           <span className="gc-badge ts">TRÈS SECRET</span>
           <span className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{today}</span>
@@ -1110,7 +1112,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
   if (phase === "briefing") {
     return (
       <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }}>
-        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← COMMANDEMENT</button>
+        <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← COMMANDEMENT</button>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <span className="gc-badge ts">{briefing?.classification||"TRÈS SECRET"}</span>
           <span className="gc-m" style={{ fontSize:10, color:"#5a6a88" }}>{today} — J+{Math.max(1,history.length)}</span>
@@ -1236,7 +1238,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
       <div style={{ marginBottom:24 }}>
-        <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+        <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
         <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>DOSSIER OPÉRATEUR</div>
         <h2 className="gc-h" style={{ fontSize:26, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h2>
         <div className="gc-m" style={{ fontSize:11, color:"#5a6a88", marginTop:3 }}>{player.email}</div>
@@ -1367,7 +1369,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         ))
       )}
       <div className="gc-div"/>
-      <button className="gc-btn full" style={{ marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }} onClick={onSettings}><Settings size={14} /> PARAMÈTRES SONS & NOTIFICATIONS</button>
+      <button className="gc-btn gold full" style={{ marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }} onClick={onSettings}><Settings size={14} /> PARAMÈTRES SONS & NOTIFICATIONS</button>
       <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onCommunity}>▸ OPÉRATEURS EN LIGNE</button>
       {!confirming ? (
         <button className="gc-btn danger" onClick={() => setConfirming(true)}>
@@ -1405,7 +1407,7 @@ function CommunityScreen({ playerId, onBack }) {
   }, [playerId]);
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
-      <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+      <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
       <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>RÉSEAU DE COMMANDEMENT</div>
       <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:20 }}>OPÉRATEURS EN LIGNE</h2>
       {loading ? (
@@ -1643,7 +1645,7 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
   };
   return (
     <div style={{ padding:"24px 20px", maxWidth:580, margin:"0 auto" }} className="gc-fade">
-      <button className="gc-btn ghost" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
+      <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
       <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>CONFIGURATION</div>
       <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:24 }}>NOTIFICATIONS</h2>
 

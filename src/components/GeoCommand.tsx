@@ -941,6 +941,7 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
 
   const handleConfirm = () => {
     if (!selAction) return;
+    playSFX("dataload");
     // Store decision with timestamp — consequence will be generated after 5h
     onDecisionMade(theaterIndex, selAction, null);
     setPhase("confirmed");

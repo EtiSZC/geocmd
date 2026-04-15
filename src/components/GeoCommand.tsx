@@ -992,6 +992,11 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
           </div>
         )}
 
+        {/* Dossier déclassifié */}
+        {theater.dossier && (
+          <DossierPanel dossier={theater.dossier} />
+        )}
+
         {/* Pending consequence — waiting for 5h delay */}
         {!theater.consequence && last?.decided_at && !consequenceReady && (
           <div style={{ marginBottom:20 }}>

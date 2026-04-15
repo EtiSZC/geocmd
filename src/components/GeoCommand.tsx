@@ -462,10 +462,10 @@ const FB_CONSEQUENCE = (scenario, actionLabel) => ({
   scoreDeltas: { stability: 2, diplomacy: -1, military: 3, intelligence: 1 },
 });
 
-function TerminalLoader({ messages=[] }) {
+function TerminalLoader({ messages=[], playSFX=null as ((t: string)=>void)|null }) {
   const [vis, setVis] = useState(0);
   useEffect(() => {
-    const ts = messages.map((_,i) => setTimeout(()=>setVis(i+1), i*560));
+    const ts = messages.map((_,i) => setTimeout(()=>{ setVis(i+1); if (playSFX) playSFX("typing"); }, i*560));
     return () => ts.forEach(clearTimeout);
   }, []);
   return (

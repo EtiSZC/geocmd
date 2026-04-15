@@ -375,6 +375,7 @@ async function loadTheaters(playerId: string) {
     scenario: t.scenario as any,
     history: (t.history as any) || [],
     consequence: t.consequence as any,
+    dossier: (t as any).dossier as any,
   }));
 }
 
@@ -387,7 +388,7 @@ async function insertTheater(playerId: string, scenario: any) {
   return data;
 }
 
-async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any; notified_ready?: boolean }) {
+async function updateTheater(theaterId: string, updates: { history?: any; consequence?: any; notified_ready?: boolean; dossier?: any }) {
   await supabase.from("theaters").update(updates).eq("id", theaterId);
 }
 

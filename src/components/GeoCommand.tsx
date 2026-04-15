@@ -1129,13 +1129,13 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
               {(briefing.keyDevelopments||[]).map((d,i,arr) => (
                 <div key={i} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:i<arr.length-1?"1px solid #162030":"none" }}>
                   <span className="gc-m" style={{ color:"#c8a84b", fontSize:11, flexShrink:0 }}>{String(i+1).padStart(2,"0")}</span>
-                  <span style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.62 }}>{d}</span>
+                  <span className="text-sm font-thin" style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.62 }}>{d}</span>
                 </div>
               ))}
             </div>
             <div style={{ borderLeft:"3px solid #c8a84b", paddingLeft:16, marginBottom:20 }}>
               <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ APPRÉCIATION DU RENSEIGNEMENT</div>
-              <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{briefing.assessment}</p>
+              <p className="text-base font-light" style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.68 }}>{briefing.assessment}</p>
             </div>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
               <div>

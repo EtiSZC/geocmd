@@ -705,6 +705,8 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
           </div>
         )
       )}
+
+      <HubInstallBanner />
     </div>
   );
 }

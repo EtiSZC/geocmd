@@ -131,7 +131,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Tu génères des événements de suivi (ondes de choc) qui sont les conséquences directes d'une décision précédente.`,
+              content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Tu génères des rapports d'onde de choc (conséquences directes d'une décision). Ce sont des rapports informatifs SANS options d'action.`,
             },
             {
               role: "user",
@@ -140,11 +140,11 @@ Description : ${parentEvent.description}
 Il a choisi l'action "${parent_option.label}" (${parent_option.cat}, risque ${parent_option.risk}).
 Le résultat a été ${outcomeLabel}.
 
-Génère un événement de suivi (onde de choc) qui est la conséquence DIRECTE de cette décision. L'événement doit être cohérent et surprenant.
+Génère un rapport d'onde de choc décrivant les conséquences DIRECTES de cette décision. Le rapport doit être informatif, cohérent et surprenant. PAS d'options d'action.
 
-JSON: {"title":"Titre court avec ⚡ ONDE DE CHOC","description":"Description en 2-3 phrases expliquant la conséquence.","region":"${parentEvent.region}","event_type":"militaire|diplomatique|économique|humanitaire","urgency":3,"options":[{"id":"opt1","label":"Action 1","desc":"Description","cat":"militaire|diplomatique|économique|renseignement","risk":"faible|modéré|élevé","scoreDeltas":{"stability":0,"diplomacy":0,"military":0,"intelligence":0}},{"id":"opt2","label":"Action 2","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}},{"id":"opt3","label":"Action 3","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}}]}
+JSON: {"title":"Titre court avec 🌊 ONDE DE CHOC","description":"Description détaillée en 3-5 phrases expliquant les conséquences géopolitiques de la décision. Sois précis et immersif.","region":"${parentEvent.region}","event_type":"militaire|diplomatique|économique|humanitaire","urgency":3}
 
-Urgency 3-5. Exactement 3 options. scoreDeltas entre -10 et +10.`,
+Urgency 3-5. Pas d'options.`,
             },
           ],
         }),
@@ -163,16 +163,11 @@ Urgency 3-5. Exactement 3 options. scoreDeltas entre -10 et +10.`,
     } catch (aiErr) {
       console.error("AI fallback triggered:", aiErr);
       parsed = {
-        title: "⚡ ONDE DE CHOC — Répercussions",
-        description: `Suite à votre décision concernant "${parentEvent.title}", de nouvelles tensions émergent dans la région ${parentEvent.region}.`,
+        title: "🌊 ONDE DE CHOC — Répercussions",
+        description: `Suite à votre décision concernant "${parentEvent.title}", de nouvelles tensions émergent dans la région ${parentEvent.region}. Les conséquences se font sentir et redessinent l'équilibre des forces en présence.`,
         region: parentEvent.region,
         event_type: parentEvent.event_type,
         urgency: 4,
-        options: [
-          { id: "opt1", label: "Diplomatie d'urgence", desc: "Tenter de désamorcer par la voie diplomatique.", cat: "diplomatique", risk: "faible", scoreDeltas: { stability: 3, diplomacy: 5, military: 0, intelligence: -1 } },
-          { id: "opt2", label: "Renforcement défensif", desc: "Sécuriser la zone et montrer sa force.", cat: "militaire", risk: "modéré", scoreDeltas: { stability: -2, diplomacy: -3, military: 6, intelligence: 2 } },
-          { id: "opt3", label: "Infiltration discrète", desc: "Envoyer des agents pour évaluer la situation.", cat: "renseignement", risk: "élevé", scoreDeltas: { stability: 0, diplomacy: -1, military: 2, intelligence: 8 } },
-        ],
       };
     }
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
@@ -182,7 +177,7 @@ Urgency 3-5. Exactement 3 options. scoreDeltas entre -10 et +10.`,
       region: parsed.region,
       event_type: parsed.event_type,
       urgency: parsed.urgency || 4,
-      options: parsed.options || [],
+      options: [],
       expires_at: expiresAt,
       parent_event_id: parent_event_id,
       parent_option_id: parent_option.id,

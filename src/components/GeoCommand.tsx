@@ -462,10 +462,35 @@ const FB_CONSEQUENCE = (scenario, actionLabel) => ({
   scoreDeltas: { stability: 2, diplomacy: -1, military: 3, intelligence: 1 },
 });
 
-function TerminalLoader({ messages=[], playSFX=null as ((t: string)=>void)|null }) {
+function TerminalLoader({ messages=[] }) {
   const [vis, setVis] = useState(0);
+  const ctxRef = useRef<AudioContext|null>(null);
+  const playTypingBurst = useCallback(() => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem("gc_audio_prefs")||"{}");
+      if (prefs.muted) return;
+      if (prefs.disabledSfx && prefs.disabledSfx.includes("typing")) return;
+      const vol = prefs.volume ?? 0.7;
+      if (!ctxRef.current) ctxRef.current = new AudioContext();
+      const ctx = ctxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+      const now = ctx.currentTime;
+      const keyCount = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < keyCount; i++) {
+        const t = now + i * 0.045 + Math.random() * 0.015;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.025, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let s = 0; s < d.length; s++) d[s] = (Math.random() * 2 - 1) * Math.exp(-s / (d.length * 0.15));
+        const src = ctx.createBufferSource(); src.buffer = buf;
+        const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2000 + Math.random() * 2000; bp.Q.value = 2;
+        const g = ctx.createGain(); g.gain.setValueAtTime(vol * (0.06 + Math.random() * 0.04), t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+        src.connect(bp).connect(g).connect(ctx.destination);
+        src.start(t); src.stop(t + 0.03);
+      }
+    } catch {}
+  }, []);
   useEffect(() => {
-    const ts = messages.map((_,i) => setTimeout(()=>{ setVis(i+1); if (playSFX) playSFX("typing"); }, i*560));
+    const ts = messages.map((_,i) => setTimeout(()=>{ setVis(i+1); playTypingBurst(); }, i*560));
     return () => ts.forEach(clearTimeout);
   }, []);
   return (

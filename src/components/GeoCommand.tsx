@@ -2031,7 +2031,7 @@ export default function GeoCommand() {
       const fe = await loadActiveFlashEvents(player.dbId);
       setFlashEvents(fe);
       const responded = await loadPlayerFlashResponses(player.dbId);
-      setRespondedFlashIds(new Set(responded.map((r: any) => r.event_id)));
+      setRespondedFlashIds(responded.map((r: any) => r.event_id));
     };
     const channel = supabase
       .channel('flash-events-realtime')

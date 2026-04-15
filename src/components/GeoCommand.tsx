@@ -192,7 +192,13 @@ async function respondToFlashEvent(eventId: string, playerId: string, option: an
     risk_outcome: outcome,
     actual_deltas: actualDeltas as any,
   });
-  if (error) return null;
+  if (error) {
+    const errorText = `${error.code || ""} ${error.message || ""} ${error.details || ""}`.toLowerCase();
+    const isDuplicate = error.code === "23505" || errorText.includes("duplicate") || errorText.includes("already exists");
+    if (isDuplicate) return { alreadyResponded: true };
+    console.warn("Flash response failed:", error);
+    return null;
+  }
   return { outcome, actualDeltas };
 }
 

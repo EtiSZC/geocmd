@@ -892,8 +892,7 @@ function DossierPanel({ dossier }: { dossier: any }) {
     </div>
   );
 }
-
-
+function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, playSFX, playerId }) {
   const [phase, setPhase] = useState("idle"); // idle → briefing → actions → confirmed
   const [briefing, setBriefing] = useState(null);
   const [actions, setActions] = useState(null);

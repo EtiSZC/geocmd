@@ -1,0 +1,1 @@
+ALTER TABLE public.theaters ADD COLUMN IF NOT EXISTS dossier jsonb DEFAULT NULL;

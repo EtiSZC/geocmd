@@ -55,7 +55,16 @@ async function loadPlayerFlashResponses(playerId: string) {
     .from("flash_event_responses")
     .select("event_id")
     .eq("player_id", playerId);
-  return (data || []).map(r => r.event_id);
+  return Array.from(new Set((data || []).map((r) => r.event_id)));
+}
+
+async function loadFlashState(playerId?: string) {
+  if (!playerId) return { events: [], respondedIds: [] as string[] };
+  const [events, respondedIds] = await Promise.all([
+    loadActiveFlashEvents(playerId),
+    loadPlayerFlashResponses(playerId),
+  ]);
+  return { events, respondedIds };
 }
 
 // Risk roll: returns "success" | "partial" | "failure" based on option risk

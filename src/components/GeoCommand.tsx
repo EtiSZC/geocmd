@@ -2438,6 +2438,7 @@ export default function GeoCommand() {
         const unread = (existing || []).find((m: any) => !dismissed.includes(m.id));
         if (unread) {
           setNpcMessage(unread);
+          audioManager.playSFX("npc_message");
           return;
         }
 
@@ -2447,6 +2448,7 @@ export default function GeoCommand() {
         });
         if (data?.success && data.data) {
           setNpcMessage(data.data);
+          audioManager.playSFX("npc_message");
         }
       } catch {}
     };

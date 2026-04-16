@@ -2754,7 +2754,9 @@ export default function GeoCommand() {
             onAddTheater={()=>setScreen("scenario-select")}
             onDropTheater={handleDropTheater}
             pendingRemoveIdx={pendingRemoveIdx}
-            onRemoveComplete={(i: number) => { setPendingRemoveIdx(null); setTheaters(prev => prev.filter((_, idx) => idx !== i)); }}/>
+            onRemoveComplete={(i: number) => { setPendingRemoveIdx(null); setTheaters(prev => prev.filter((_, idx) => idx !== i)); }}
+            npcUnreadCount={npcUnreadCount}
+            onOpenArchives={()=>setScreen("npc-archives")}/>
         )}
         {screen==="scenario-select"&&(
           <ScenarioSelect existingIds={theaters.map(t=>t.scenario.id)} onSelect={handleAddScenario} onBack={()=>setScreen("hub")}/>
@@ -2763,13 +2765,16 @@ export default function GeoCommand() {
           <TheaterView theater={theaters[activeIdx]} theaterIndex={activeIdx} onDecisionMade={handleDecisionMade} onBack={()=>setScreen("hub")} onDrop={()=>{ handleDropTheater(activeIdx, true); setScreen("hub"); }} playSFX={audioManager.playSFX} playerId={player?.dbId}/>
         )}
         {screen==="profile"&&(
-          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")}/>
+          <ProfileScreen player={player} theaters={theaters} onBack={()=>setScreen("hub")} onReset={handleReset} onCommunity={()=>setScreen("community")} onSettings={()=>setScreen("settings")} onArchives={()=>setScreen("npc-archives")}/>
         )}
         {screen==="settings"&&(
           <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")} audioManager={audioManager}/>
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
+        )}
+        {screen==="npc-archives"&&player&&(
+          <NpcArchivesScreen playerId={player.dbId} onBack={()=>{ refreshNpcUnread(player.dbId); setScreen("profile"); }}/>
         )}
         {/* NPC Message Overlay */}
         {npcMessage && (

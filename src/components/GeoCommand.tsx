@@ -1993,7 +1993,7 @@ function NpcMessageOverlay({ message, onDismiss }: { message: any; onDismiss: (i
   );
 }
 
-
+function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);

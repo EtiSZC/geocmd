@@ -1416,6 +1416,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         </div>
       ) : profileTab === "reseau" ? (
         <div className="gc-fade">
+          <button className="gc-btn full" style={{ marginBottom:18 }} onClick={onArchives}>📡 ARCHIVE MESSAGES</button>
           <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>◈ PERSONNAGES RÉCURRENTS</div>
           {npcsLoading ? (
             <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>
@@ -1554,7 +1555,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   );
 }
 
-function CommunityScreen({ playerId, onBack, onArchives }) {
+function CommunityScreen({ playerId, onBack }) {
   const [others, setOthers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -1565,9 +1566,6 @@ function CommunityScreen({ playerId, onBack, onArchives }) {
       <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
       <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>RÉSEAU DE COMMANDEMENT</div>
       <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:20 }}>OPÉRATEURS EN LIGNE</h2>
-      {onArchives && (
-        <button className="gc-btn full" style={{ marginBottom:20 }} onClick={onArchives}>📡 ARCHIVE MESSAGES</button>
-      )}
       {loading ? (
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>
           <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>CHARGEMENT...</span>
@@ -2773,10 +2771,10 @@ export default function GeoCommand() {
           <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")} audioManager={audioManager}/>
         )}
         {screen==="community"&&player&&(
-          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")} onArchives={()=>setScreen("npc-archives")}/>
+          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
         )}
         {screen==="npc-archives"&&player&&(
-          <NpcArchivesScreen playerId={player.dbId} onBack={()=>{ refreshNpcUnread(player.dbId); setScreen("community"); }}/>
+          <NpcArchivesScreen playerId={player.dbId} onBack={()=>{ refreshNpcUnread(player.dbId); setScreen("profile"); }}/>
         )}
         {/* NPC Message Overlay */}
         {npcMessage && (

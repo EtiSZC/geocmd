@@ -1607,6 +1607,88 @@ function CommunityScreen({ playerId, onBack }) {
   );
 }
 
+function NpcArchivesScreen({ playerId, onBack }: { playerId: string; onBack: () => void }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("npc_messages")
+          .select("*")
+          .eq("player_id", playerId)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        setMessages(data || []);
+        // Mark all as read locally
+        try {
+          const key = "gc_dismissed_npc_messages";
+          const existing: string[] = JSON.parse(localStorage.getItem(key) || "[]");
+          const merged = Array.from(new Set([...existing, ...(data || []).map((m: any) => m.id)]));
+          localStorage.setItem(key, JSON.stringify(merged));
+        } catch {}
+      } catch {}
+      setLoading(false);
+    })();
+  }, [playerId]);
+
+  const trustColor = (t: string) => t === "allié" ? "#00e87a" : t === "hostile" ? "#ff3344" : "#c8a84b";
+  const fmtDateTime = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    } catch { return iso; }
+  };
+
+  return (
+    <div style={{ padding: "24px 20px", maxWidth: 580, margin: "0 auto" }} className="gc-fade">
+      <button className="gc-btn gold" style={{ marginBottom: 16 }} onClick={onBack}>← RETOUR</button>
+      <div className="gc-m" style={{ fontSize: 10, color: "#5a6a88", letterSpacing: 3, marginBottom: 4 }}>CANAL CHIFFRÉ</div>
+      <h2 className="gc-h" style={{ fontSize: 24, fontWeight: 700, letterSpacing: 3, marginTop: 4, marginBottom: 20 }}>📡 ARCHIVES MESSAGES</h2>
+
+      {loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0" }}>
+          <span className="gc-dot" /><span className="gc-m" style={{ fontSize: 11, color: "#5a6a88", letterSpacing: 2 }}>CHARGEMENT...</span>
+        </div>
+      ) : messages.length === 0 ? (
+        <div className="gc-panel" style={{ padding: 20, textAlign: "center" }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+          <div className="gc-m" style={{ fontSize: 11, color: "#5a6a88", letterSpacing: 2, marginBottom: 6 }}>AUCUN MESSAGE REÇU</div>
+          <p style={{ fontSize: 12, color: "#3a4a5a", lineHeight: 1.6 }}>
+            Vos contacts vous enverront des messages chiffrés au fil du temps. Revenez régulièrement.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {messages.map(m => (
+            <div key={m.id} className="gc-panel" style={{ padding: 14, borderLeft: `3px solid ${trustColor(m.trust_level)}` }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                {m.portrait_url ? (
+                  <img src={m.portrait_url} alt={m.npc_name} style={{ width: 48, height: 48, objectFit: "cover", border: "1px solid var(--brd)", flexShrink: 0, imageRendering: "pixelated" }} />
+                ) : (
+                  <div style={{ width: 48, height: 48, background: "#162030", border: "1px solid var(--brd)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>👤</div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div className="gc-h" style={{ fontSize: 14, fontWeight: 600, color: "#dce4f0" }}>{m.npc_name}</div>
+                    <div className="gc-m" style={{ fontSize: 9, color: trustColor(m.trust_level), letterSpacing: 1.5, textTransform: "uppercase" }}>{m.trust_level}</div>
+                  </div>
+                  {m.npc_faction && (
+                    <div className="gc-m" style={{ fontSize: 9, color: "#c8a84b", letterSpacing: 1, marginBottom: 6 }}>{m.npc_faction}</div>
+                  )}
+                  <p style={{ fontSize: 13, color: "#8a9ab8", lineHeight: 1.5, margin: "6px 0" }}>{m.message}</p>
+                  <div className="gc-m" style={{ fontSize: 9, color: "#3a4a5a", letterSpacing: 1, marginTop: 6 }}>{fmtDateTime(m.created_at)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TestPushButton({ playerId }: { playerId: string | null }) {
   const [status, setStatus] = useState<"idle"|"sending"|"success"|"error">("idle");
   const [errorMsg, setErrorMsg] = useState("");

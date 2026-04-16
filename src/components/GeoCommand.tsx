@@ -2456,7 +2456,7 @@ export default function GeoCommand() {
     return () => clearInterval(iv);
   }, [player]);
 
-
+  const handleLogin = useCallback(async (p: any) => {
     audioManager.playSFX("success");
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }

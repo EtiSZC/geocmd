@@ -1609,10 +1609,10 @@ function TestPushButton({ playerId }: { playerId: string | null }) {
 }
 
 const NOTIF_PREFS_KEY = "geocmd_notif_prefs";
-function getNotifPrefs(): { flash: boolean; theater: boolean; community: boolean } {
-  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false, community: v.community !== false }; } catch { return { flash: true, theater: true, community: true }; }
+function getNotifPrefs(): { flash: boolean; theater: boolean; community: boolean; npc: boolean } {
+  try { const v = JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || "{}"); return { flash: v.flash !== false, theater: v.theater !== false, community: v.community !== false, npc: v.npc !== false }; } catch { return { flash: true, theater: true, community: true, npc: true }; }
 }
-function saveNotifPrefs(prefs: { flash: boolean; theater: boolean }) {
+function saveNotifPrefs(prefs: { flash: boolean; theater: boolean; community: boolean; npc: boolean }) {
   localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
 
@@ -1831,7 +1831,7 @@ function AudioSettings({ audioManager }: { audioManager: { updatePrefs: (p: Audi
 function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string | null; onBack: () => void; audioManager?: { updatePrefs: (p: AudioPrefs) => void; getPrefs: () => AudioPrefs; playSFX: (t: SFXType) => void } }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [saving, setSaving] = useState(false);
-  const toggle = async (key: "flash" | "theater" | "community") => {
+  const toggle = async (key: "flash" | "theater" | "community" | "npc") => {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     saveNotifPrefs(next);
@@ -1841,7 +1841,8 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
         notify_flash: next.flash,
         notify_theater: next.theater,
         notify_community: next.community,
-      }).eq("player_id", playerId);
+        notify_npc: next.npc,
+      } as any).eq("player_id", playerId);
       setSaving(false);
     }
   };
@@ -1855,6 +1856,7 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
         { key: "flash" as const, label: "ÉVÉNEMENTS FLASH", desc: "Alertes push lors de nouvelles crises éclair (probabilité 25%/heure)." },
         { key: "theater" as const, label: "THÉÂTRES — STATUT PRÊT", desc: "Notification push lorsqu'un théâtre est prêt après 5 heures d'attente." },
         { key: "community" as const, label: "ALERTES COMMUNAUTAIRES", desc: "Notification quand un autre opérateur rejoint un théâtre dans la même région que l'un des vôtres." },
+        { key: "npc" as const, label: "MESSAGES PNJ", desc: "Alertes push lorsqu'un contact de votre réseau (allié, neutre ou hostile) vous envoie un message chiffré." },
       ].map(item => (
         <div key={item.key} className="gc-panel" style={{ padding:18, marginBottom:14 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -2363,6 +2365,23 @@ export default function GeoCommand() {
         // Also handle the legacy default tag "geocmd-event" as a flash event (safety net)
         if (tag.startsWith("flash-") || tag.startsWith("shockwave-") || tag === "geocmd-event" || tag === "") {
           await refreshFlashState(player.dbId);
+          setScreen("hub");
+        }
+        // NPC message → load latest unread message and open hub
+        else if (tag.startsWith("npc-")) {
+          try {
+            const dismissed: string[] = (() => {
+              try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
+            })();
+            const { data: msgs } = await supabase
+              .from("npc_messages")
+              .select("*")
+              .eq("player_id", player.dbId)
+              .order("created_at", { ascending: false })
+              .limit(5);
+            const unread = (msgs || []).find((m: any) => !dismissed.includes(m.id));
+            if (unread) setNpcMessage(unread);
+          } catch {}
           setScreen("hub");
         }
         // Theater ready → go to hub and refresh theaters

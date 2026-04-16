@@ -2298,7 +2298,15 @@ export default function GeoCommand() {
         else if (tag.startsWith("theater-ready-")) {
           const t = await loadTheaters(player.dbId);
           setTheaters(t);
-          setScreen("hub");
+          // Extract theater ID from tag and navigate directly to it
+          const theaterId = tag.replace("theater-ready-", "");
+          const idx = t.findIndex((th: any) => th.id === theaterId);
+          if (idx >= 0) {
+            setActiveIdx(idx);
+            setScreen("theater");
+          } else {
+            setScreen("hub");
+          }
         }
         // Community or other → just go to hub
         else {

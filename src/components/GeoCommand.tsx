@@ -318,6 +318,24 @@ function injectStyles() {
     .gc-fade { animation:fadeUp .35s ease forwards; }
     @keyframes slideR { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
     .gc-slide { animation:slideR .28s ease forwards; }
+    @keyframes npcSlideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    .gc-npc-overlay {
+      position:fixed; bottom:20px; right:20px; left:20px; z-index:100;
+      max-width:420px; margin-left:auto;
+      background:rgba(10,15,28,0.97); border:1px solid var(--brd2);
+      clip-path:polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+      animation:npcSlideUp .4s ease forwards;
+      backdrop-filter:blur(12px);
+    }
+    .gc-npc-overlay::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,rgba(200,168,75,0.6),transparent);
+    }
+    .gc-npc-portrait {
+      width:48px; height:48px; border:1px solid var(--brd2); background:var(--bg);
+      image-rendering:pixelated; flex-shrink:0;
+    }
+    .gc-npc-trust-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; }
     ::-webkit-scrollbar { width:3px; }
     ::-webkit-scrollbar-track { background:var(--bg); }
     ::-webkit-scrollbar-thumb { background:var(--brd2); border-radius:2px; }

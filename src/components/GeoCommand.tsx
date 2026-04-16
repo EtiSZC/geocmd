@@ -2448,6 +2448,7 @@ export default function GeoCommand() {
         });
         if (data?.success && data.data) {
           setNpcMessage(data.data);
+          audioManager.playSFX("npc_message");
         }
       } catch {}
     };

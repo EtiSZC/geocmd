@@ -2253,7 +2253,12 @@ export default function GeoCommand() {
     if (!resolvedPlayerId) return;
     const { events, respondedIds } = await loadFlashState(resolvedPlayerId);
     setFlashEvents(events);
-    setRespondedFlashIds(respondedIds);
+    try {
+      const dismissed = JSON.parse(localStorage.getItem("gc_dismissed_shockwaves") || "[]");
+      setRespondedFlashIds(Array.from(new Set([...respondedIds, ...dismissed])));
+    } catch {
+      setRespondedFlashIds(respondedIds);
+    }
   }, [player?.dbId]);
 
   // Bootstrap: restore last session from Supabase

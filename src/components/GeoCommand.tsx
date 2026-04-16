@@ -1554,7 +1554,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
   );
 }
 
-function CommunityScreen({ playerId, onBack }) {
+function CommunityScreen({ playerId, onBack, onArchives }) {
   const [others, setOthers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -1565,6 +1565,9 @@ function CommunityScreen({ playerId, onBack }) {
       <button className="gc-btn gold" style={{ marginBottom:16 }} onClick={onBack}>← RETOUR</button>
       <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3, marginBottom:4 }}>RÉSEAU DE COMMANDEMENT</div>
       <h2 className="gc-h" style={{ fontSize:24, fontWeight:700, letterSpacing:3, marginTop:4, marginBottom:20 }}>OPÉRATEURS EN LIGNE</h2>
+      {onArchives && (
+        <button className="gc-btn full" style={{ marginBottom:20 }} onClick={onArchives}>📡 ARCHIVE MESSAGES</button>
+      )}
       {loading ? (
         <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>
           <span className="gc-dot"/><span className="gc-m" style={{ fontSize:11, color:"#5a6a88", letterSpacing:2 }}>CHARGEMENT...</span>

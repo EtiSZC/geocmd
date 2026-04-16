@@ -1942,7 +1942,58 @@ function ShockwaveCountdown({ color, onComplete }: { color: string; onComplete: 
   );
 }
 
-function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
+function NpcMessageOverlay({ message, onDismiss }: { message: any; onDismiss: (id: string) => void }) {
+  if (!message) return null;
+  const trustColor = message.trust_level === "allié" ? "#00e87a" : message.trust_level === "hostile" ? "#ff3344" : "#5a6a88";
+  const trustLabel = message.trust_level?.toUpperCase() || "NEUTRE";
+
+  return (
+    <div className="gc-npc-overlay">
+      <div style={{ padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+        {/* Portrait */}
+        {message.portrait_url ? (
+          <img src={message.portrait_url} alt={message.npc_name} className="gc-npc-portrait" />
+        ) : (
+          <div className="gc-npc-portrait" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 20 }}>👤</span>
+          </div>
+        )}
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span className="gc-h" style={{ fontSize: 14, fontWeight: 600, color: "#dce4f0" }}>
+              {message.npc_name}
+            </span>
+            <span className="gc-m" style={{ fontSize: 9, letterSpacing: 1.5, display: "flex", alignItems: "center" }}>
+              <span className="gc-npc-trust-dot" style={{ background: trustColor, boxShadow: `0 0 6px ${trustColor}` }} />
+              <span style={{ color: trustColor }}>{trustLabel}</span>
+            </span>
+          </div>
+          {message.npc_faction && (
+            <div className="gc-m" style={{ fontSize: 9, color: "#5a6a88", letterSpacing: 1.5, marginBottom: 6 }}>
+              {message.npc_faction}
+            </div>
+          )}
+          <p style={{ fontSize: 13, color: "#b0bdd0", lineHeight: 1.55, fontFamily: "'Barlow',sans-serif" }}>
+            {message.message}
+          </p>
+        </div>
+      </div>
+      {/* Close button */}
+      <div style={{ padding: "0 16px 12px", textAlign: "right" }}>
+        <button
+          className="gc-btn ghost"
+          style={{ fontSize: 10, padding: "6px 14px" }}
+          onClick={() => onDismiss(message.id)}
+        >
+          FERMER
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
   const [selOption, setSelOption] = useState<any>(null);

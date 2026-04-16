@@ -280,7 +280,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste.${seasonalHint}` },
+            { role: "system", content: `Tu es un système de simulation de crises géopolitiques. Réponds UNIQUEMENT en JSON valide, aucun texte autour. Génère une crise flash imprévue et réaliste.${seasonalHint}${antiDupHint}${rotationHint}` },
             { role: "user", content: `Génère un événement flash géopolitique urgent. La crise doit être surprenante mais plausible.
 JSON: {"title":"Titre court","description":"Description en 2-3 phrases.","region":"Zone géographique","event_type":"militaire|diplomatique|économique|humanitaire","urgency":4,"options":[{"id":"opt1","label":"Action rapide 1","desc":"Description","cat":"militaire|diplomatique|économique|renseignement","risk":"faible|modéré|élevé","scoreDeltas":{"stability":3,"diplomacy":-2,"military":5,"intelligence":0}},{"id":"opt2","label":"Action rapide 2","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}},{"id":"opt3","label":"Action rapide 3","desc":"Description","cat":"...","risk":"...","scoreDeltas":{...}}]}
 Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.` },

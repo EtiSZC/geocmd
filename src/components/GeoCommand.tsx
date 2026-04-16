@@ -2316,6 +2316,7 @@ export default function GeoCommand() {
   const [flashEvents, setFlashEvents] = useState<any[]>([]);
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
+  const [npcMessage, setNpcMessage] = useState<any>(null);
 
   const refreshFlashState = useCallback(async (playerId?: string) => {
     const resolvedPlayerId = playerId || player?.dbId;

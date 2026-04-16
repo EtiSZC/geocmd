@@ -564,6 +564,7 @@ export function useAudioManager(screen: ScreenType) {
       case "radio": playRadioStatic(ctx, v); break;
       case "dataload": playDataLoad(ctx, v); break;
       case "typing": playTyping(ctx, v); break;
+      case "npc_message": playNpcMessage(ctx, v); break;
     }
   }, [ensureCtx]);
 

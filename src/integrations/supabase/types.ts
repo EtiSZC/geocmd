@@ -254,6 +254,7 @@ export type Database = {
           id: string
           notify_community: boolean
           notify_flash: boolean
+          notify_npc: boolean
           notify_theater: boolean
           player_id: string
           subscription: Json
@@ -263,6 +264,7 @@ export type Database = {
           id?: string
           notify_community?: boolean
           notify_flash?: boolean
+          notify_npc?: boolean
           notify_theater?: boolean
           player_id: string
           subscription: Json
@@ -272,6 +274,7 @@ export type Database = {
           id?: string
           notify_community?: boolean
           notify_flash?: boolean
+          notify_npc?: boolean
           notify_theater?: boolean
           player_id?: string
           subscription?: Json

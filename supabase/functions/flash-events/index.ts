@@ -244,9 +244,35 @@ serve(async (req) => {
       // December
       if (month === 12 && day >= 1 && day <= 15) seasonalEvents.push("Sommet UE-Afrique");
 
-      const seasonalHint = seasonalEvents.length > 0
+      // Apply seasonal context only 1 in 3 generations to prevent over-representation
+      const useSeasonal = seasonalEvents.length > 0 && Math.random() < 1 / 3;
+      const seasonalHint = useSeasonal
         ? `\n\nCONTEXTE SAISONNIER : Nous sommes le ${day}/${month}/2026. En ce moment se déroule : ${seasonalEvents.join(", ")}. Tu DOIS créer une crise en lien direct avec cet événement international (tensions en coulisses, incident pendant le sommet, fuite diplomatique, coup de théâtre en marge de l'événement, etc.). Mentionne explicitement le sommet/événement dans le titre ou la description.`
-        : `\n\nNous sommes le ${day}/${month}/2026. Génère une crise basée sur l'actualité géopolitique de cette période.`;
+        : `\n\nNous sommes le ${day}/${month}/2026. Génère une crise basée sur l'actualité géopolitique de cette période. NE FAIS PAS référence à un sommet international en cours.`;
+
+      // Anti-duplication: fetch last 5 generated root events to inject as exclusion list
+      const { data: recentEvents } = await sb
+        .from("flash_events")
+        .select("title, region, event_type")
+        .is("parent_event_id", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const recentList = (recentEvents || []).map((e: any) => `- "${e.title}" (${e.region}, ${e.event_type})`).join("\n");
+      const antiDupHint = recentList
+        ? `\n\nÉVÉNEMENTS RÉCEMMENT GÉNÉRÉS (À ÉVITER ABSOLUMENT) :\n${recentList}\n\nTu DOIS générer une crise avec un thème, une région ET un type d'événement DIFFÉRENTS de ceux ci-dessus. Pas de répétition de fuites de données, de sommets FMI/Banque mondiale, ou de scénarios similaires.`
+        : "";
+
+      // Forced rotation: pick a region category and event_type not used recently
+      const allRegions = ["Europe de l'Est", "Asie-Pacifique", "Moyen-Orient", "Afrique subsaharienne", "Amérique latine", "Arctique", "Asie centrale", "Corne de l'Afrique", "Caucase", "Mer de Chine méridionale"];
+      const allTypes = ["militaire", "diplomatique", "économique", "humanitaire", "renseignement", "cyber"];
+      const recentRegions = new Set((recentEvents || []).map((e: any) => e.region));
+      const recentTypes = new Set((recentEvents || []).map((e: any) => e.event_type));
+      const availableRegions = allRegions.filter(r => !recentRegions.has(r));
+      const availableTypes = allTypes.filter(t => !recentTypes.has(t));
+      const forcedRegion = availableRegions.length > 0 ? availableRegions[Math.floor(Math.random() * availableRegions.length)] : allRegions[Math.floor(Math.random() * allRegions.length)];
+      const forcedType = availableTypes.length > 0 ? availableTypes[Math.floor(Math.random() * availableTypes.length)] : allTypes[Math.floor(Math.random() * allTypes.length)];
+      const rotationHint = `\n\nROTATION FORCÉE : La crise DOIT se dérouler dans la région "${forcedRegion}" et être de type "${forcedType}". Adapte le scénario en conséquence.`;
 
       const aiResp = await fetch(AI_URL, {
         method: "POST",

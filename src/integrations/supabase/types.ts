@@ -122,6 +122,42 @@ export type Database = {
           },
         ]
       }
+      npc_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          npc_faction: string | null
+          npc_id: string
+          npc_name: string
+          player_id: string
+          portrait_url: string | null
+          trust_level: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          npc_faction?: string | null
+          npc_id: string
+          npc_name: string
+          player_id: string
+          portrait_url?: string | null
+          trust_level: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          npc_faction?: string | null
+          npc_id?: string
+          npc_name?: string
+          player_id?: string
+          portrait_url?: string | null
+          trust_level?: string
+        }
+        Relationships: []
+      }
       npc_relationships: {
         Row: {
           created_at: string
@@ -132,6 +168,7 @@ export type Database = {
           origin_region: string
           origin_theater_id: string | null
           player_id: string
+          portrait_base64: string | null
           role: string
           status: string
           trust_score: number
@@ -146,6 +183,7 @@ export type Database = {
           origin_region: string
           origin_theater_id?: string | null
           player_id: string
+          portrait_base64?: string | null
           role: string
           status?: string
           trust_score?: number
@@ -160,6 +198,7 @@ export type Database = {
           origin_region?: string
           origin_theater_id?: string | null
           player_id?: string
+          portrait_base64?: string | null
           role?: string
           status?: string
           trust_score?: number

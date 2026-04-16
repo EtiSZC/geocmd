@@ -318,6 +318,24 @@ function injectStyles() {
     .gc-fade { animation:fadeUp .35s ease forwards; }
     @keyframes slideR { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
     .gc-slide { animation:slideR .28s ease forwards; }
+    @keyframes npcSlideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+    .gc-npc-overlay {
+      position:fixed; bottom:20px; right:20px; left:20px; z-index:100;
+      max-width:420px; margin-left:auto;
+      background:rgba(10,15,28,0.97); border:1px solid var(--brd2);
+      clip-path:polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
+      animation:npcSlideUp .4s ease forwards;
+      backdrop-filter:blur(12px);
+    }
+    .gc-npc-overlay::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,rgba(200,168,75,0.6),transparent);
+    }
+    .gc-npc-portrait {
+      width:48px; height:48px; border:1px solid var(--brd2); background:var(--bg);
+      image-rendering:pixelated; flex-shrink:0;
+    }
+    .gc-npc-trust-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; }
     ::-webkit-scrollbar { width:3px; }
     ::-webkit-scrollbar-track { background:var(--bg); }
     ::-webkit-scrollbar-thumb { background:var(--brd2); border-radius:2px; }
@@ -1924,6 +1942,57 @@ function ShockwaveCountdown({ color, onComplete }: { color: string; onComplete: 
   );
 }
 
+function NpcMessageOverlay({ message, onDismiss }: { message: any; onDismiss: (id: string) => void }) {
+  if (!message) return null;
+  const trustColor = message.trust_level === "allié" ? "#00e87a" : message.trust_level === "hostile" ? "#ff3344" : "#5a6a88";
+  const trustLabel = message.trust_level?.toUpperCase() || "NEUTRE";
+
+  return (
+    <div className="gc-npc-overlay">
+      <div style={{ padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+        {/* Portrait */}
+        {message.portrait_url ? (
+          <img src={message.portrait_url} alt={message.npc_name} className="gc-npc-portrait" />
+        ) : (
+          <div className="gc-npc-portrait" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 20 }}>👤</span>
+          </div>
+        )}
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span className="gc-h" style={{ fontSize: 14, fontWeight: 600, color: "#dce4f0" }}>
+              {message.npc_name}
+            </span>
+            <span className="gc-m" style={{ fontSize: 9, letterSpacing: 1.5, display: "flex", alignItems: "center" }}>
+              <span className="gc-npc-trust-dot" style={{ background: trustColor, boxShadow: `0 0 6px ${trustColor}` }} />
+              <span style={{ color: trustColor }}>{trustLabel}</span>
+            </span>
+          </div>
+          {message.npc_faction && (
+            <div className="gc-m" style={{ fontSize: 9, color: "#5a6a88", letterSpacing: 1.5, marginBottom: 6 }}>
+              {message.npc_faction}
+            </div>
+          )}
+          <p style={{ fontSize: 13, color: "#b0bdd0", lineHeight: 1.55, fontFamily: "'Barlow',sans-serif" }}>
+            {message.message}
+          </p>
+        </div>
+      </div>
+      {/* Close button */}
+      <div style={{ padding: "0 16px 12px", textAlign: "right" }}>
+        <button
+          className="gc-btn ghost"
+          style={{ fontSize: 10, padding: "6px 14px" }}
+          onClick={() => onDismiss(message.id)}
+        >
+          FERMER
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function FlashEventBanner({ events, respondedIds, playerId, onRespond, onDismiss, theaters = [] }: any) {
   const active = events.filter(e => !respondedIds.includes(e.id));
   const [sel, setSel] = useState<string | null>(null);
@@ -2247,6 +2316,7 @@ export default function GeoCommand() {
   const [flashEvents, setFlashEvents] = useState<any[]>([]);
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
+  const [npcMessage, setNpcMessage] = useState<any>(null);
 
   const refreshFlashState = useCallback(async (playerId?: string) => {
     const resolvedPlayerId = playerId || player?.dbId;
@@ -2345,6 +2415,44 @@ export default function GeoCommand() {
     // Check immediately on login
     checkTheaterNotify();
     const iv = setInterval(checkTheaterNotify, 5 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [player]);
+
+  // NPC message polling — check on load + every 30 minutes
+  useEffect(() => {
+    if (!player) return;
+    const dismissed: string[] = (() => {
+      try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
+    })();
+
+    const checkNpcMessage = async () => {
+      try {
+        // First check for unread existing messages
+        const { data: existing } = await supabase
+          .from("npc_messages")
+          .select("*")
+          .eq("player_id", player.dbId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const unread = (existing || []).find((m: any) => !dismissed.includes(m.id));
+        if (unread) {
+          setNpcMessage(unread);
+          return;
+        }
+
+        // Try to generate a new one
+        const { data } = await supabase.functions.invoke("npc-message", {
+          body: { player_id: player.dbId },
+        });
+        if (data?.success && data.data) {
+          setNpcMessage(data.data);
+        }
+      } catch {}
+    };
+
+    checkNpcMessage();
+    const iv = setInterval(checkNpcMessage, 30 * 60 * 1000);
     return () => clearInterval(iv);
   }, [player]);
 
@@ -2508,6 +2616,21 @@ export default function GeoCommand() {
         )}
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
+        )}
+        {/* NPC Message Overlay */}
+        {npcMessage && (
+          <NpcMessageOverlay
+            message={npcMessage}
+            onDismiss={(id: string) => {
+              setNpcMessage(null);
+              try {
+                const key = "gc_dismissed_npc_messages";
+                const existing = JSON.parse(localStorage.getItem(key) || "[]");
+                existing.push(id);
+                localStorage.setItem(key, JSON.stringify(existing));
+              } catch {}
+            }}
+          />
         )}
       </div>
     </div>

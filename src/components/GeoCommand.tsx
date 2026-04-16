@@ -2771,10 +2771,10 @@ export default function GeoCommand() {
           <SettingsScreen playerId={player?.dbId} onBack={()=>setScreen("profile")} audioManager={audioManager}/>
         )}
         {screen==="community"&&player&&(
-          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")} onArchives={()=>setScreen("npc-archives")}/>
+          <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
         )}
         {screen==="npc-archives"&&player&&(
-          <NpcArchivesScreen playerId={player.dbId} onBack={()=>{ refreshNpcUnread(player.dbId); setScreen("community"); }}/>
+          <NpcArchivesScreen playerId={player.dbId} onBack={()=>{ refreshNpcUnread(player.dbId); setScreen("profile"); }}/>
         )}
         {/* NPC Message Overlay */}
         {npcMessage && (

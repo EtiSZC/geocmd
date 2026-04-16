@@ -1416,6 +1416,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
         </div>
       ) : profileTab === "reseau" ? (
         <div className="gc-fade">
+          <button className="gc-btn full" style={{ marginBottom:18 }} onClick={onArchives}>📡 ARCHIVE MESSAGES</button>
           <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:16 }}>◈ PERSONNAGES RÉCURRENTS</div>
           {npcsLoading ? (
             <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 0" }}>

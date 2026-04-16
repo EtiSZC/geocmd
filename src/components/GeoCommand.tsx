@@ -625,7 +625,7 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater, pendingRemoveIdx = null, onRemoveComplete = null }) {
+function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheater, pendingRemoveIdx = null, onRemoveComplete = null, npcUnreadCount = 0, onOpenArchives = null }) {
   const today = fmtDate();
   const urgencyColor = u => u>=5?"#ff3344":u>=4?"#ff8800":"#c8a84b";
   const [removingIdx, setRemovingIdx] = useState<number|null>(null);
@@ -645,10 +645,36 @@ function HubScreen({ player, theaters, onOpenTheater, onAddTheater, onDropTheate
     <div style={{ padding:"24px 20px", maxWidth:480, margin:"0 auto" }} className="gc-fade">
 
       {/* Greeting */}
-      <div style={{ marginBottom:36 }}>
+      <div style={{ marginBottom:36, position:"relative" }}>
         <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", letterSpacing:3 }}>COMMANDEMENT</div>
         <h1 className="gc-h" style={{ fontSize:32, fontWeight:700, letterSpacing:3, marginTop:4 }}>{player.callsign}</h1>
         <div className="gc-m" style={{ fontSize:10, color:"#5a6a88", marginTop:6 }}>{today}</div>
+        {npcUnreadCount > 0 && (
+          <button
+            onClick={() => onOpenArchives && onOpenArchives()}
+            title={`${npcUnreadCount} message${npcUnreadCount > 1 ? "s" : ""} PNJ non lu${npcUnreadCount > 1 ? "s" : ""}`}
+            style={{
+              position:"absolute", top:0, right:0,
+              display:"flex", alignItems:"center", gap:8,
+              background:"rgba(200,168,75,0.08)",
+              border:"1px solid #c8a84b",
+              padding:"6px 12px",
+              cursor:"pointer",
+              transition:"all .2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,168,75,0.18)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(200,168,75,0.08)"; }}
+          >
+            <span style={{ fontSize:14 }}>📡</span>
+            <span className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:1.5 }}>RÉSEAU</span>
+            <span className="gc-h" style={{
+              display:"inline-flex", alignItems:"center", justifyContent:"center",
+              minWidth:20, height:20, padding:"0 6px",
+              borderRadius:10, background:"#c8a84b", color:"#0a0e1a",
+              fontSize:11, fontWeight:700,
+            }}>{npcUnreadCount}</span>
+          </button>
+        )}
       </div>
 
       {/* Empty state */}
@@ -1322,7 +1348,7 @@ function ScorePanel({ score, compact = false }) {
   );
 }
 
-function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSettings }) {
+function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSettings, onArchives }) {
   const total    = theaters.reduce((acc, t) => acc + t.history.length, 0);
   const nbT      = theaters.length;
   const [confirming, setConfirming] = useState(false);
@@ -1499,6 +1525,7 @@ function ProfileScreen({ player, theaters, onBack, onReset, onCommunity, onSetti
       )}
       <div className="gc-div"/>
       <button className="gc-btn gold full" style={{ marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }} onClick={onSettings}><Settings size={14} /> PARAMÈTRES SONS & NOTIFICATIONS</button>
+      <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onArchives}>📡 ARCHIVES — MESSAGES PNJ</button>
       <button className="gc-btn full" style={{ marginBottom:14 }} onClick={onCommunity}>▸ OPÉRATEURS EN LIGNE</button>
       {!confirming ? (
         <button className="gc-btn danger" onClick={() => setConfirming(true)}>
@@ -2319,6 +2346,29 @@ export default function GeoCommand() {
   const [respondedFlashIds, setRespondedFlashIds] = useState<string[]>([]);
   const [pendingRemoveIdx, setPendingRemoveIdx] = useState<number|null>(null);
   const [npcMessage, setNpcMessage] = useState<any>(null);
+  const [npcUnreadCount, setNpcUnreadCount] = useState<number>(0);
+
+  const refreshNpcUnread = useCallback(async (playerId?: string) => {
+    const pid = playerId || player?.dbId;
+    if (!pid) return;
+    try {
+      const { data } = await supabase
+        .from("npc_messages")
+        .select("id")
+        .eq("player_id", pid)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const dismissed: string[] = (() => {
+        try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
+      })();
+      const unread = (data || []).filter((m: any) => !dismissed.includes(m.id));
+      setNpcUnreadCount(unread.length);
+    } catch {}
+  }, [player?.dbId]);
+
+  useEffect(() => {
+    if (player?.dbId) refreshNpcUnread(player.dbId);
+  }, [player?.dbId, npcMessage, refreshNpcUnread]);
 
   const refreshFlashState = useCallback(async (playerId?: string) => {
     const resolvedPlayerId = playerId || player?.dbId;

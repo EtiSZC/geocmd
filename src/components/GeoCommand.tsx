@@ -1881,11 +1881,11 @@ function SettingsScreen({ playerId, onBack, audioManager }: { playerId: string |
         </div>
       ))}
 
-      <TestPushButton playerId={playerId} />
-
       <InstallPWAButton />
 
       {audioManager && <AudioSettings audioManager={audioManager} />}
+
+      <TestPushButton playerId={playerId} />
 
       <div className="gc-panel" style={{ padding:16, marginTop:10 }}>
         <p style={{ fontSize:11, color:"#5a6a88", lineHeight:1.6, margin:0 }}>

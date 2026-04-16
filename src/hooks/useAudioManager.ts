@@ -456,8 +456,38 @@ function playTyping(ctx: AudioContext, vol: number) {
 }
 
 
+// Incoming NPC message: subtle encrypted radio ping (two soft tones + static whisper)
+function playNpcMessage(ctx: AudioContext, vol: number) {
+  const now = ctx.currentTime;
+  // Soft ascending double-ping
+  for (let i = 0; i < 2; i++) {
+    const t = now + i * 0.18;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(800 + i * 200, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol * 0.08, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.16);
+  }
+  // Faint static tail (radio channel opening)
+  const ns = ctx.createBufferSource();
+  ns.buffer = createNoise(ctx, 0.4);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass"; bp.frequency.value = 3000; bp.Q.value = 2;
+  const gn = ctx.createGain();
+  gn.gain.setValueAtTime(0, now + 0.3);
+  gn.gain.linearRampToValueAtTime(vol * 0.04, now + 0.35);
+  gn.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+  ns.connect(bp).connect(gn).connect(ctx.destination);
+  ns.start(now + 0.3); ns.stop(now + 0.7);
+}
+
+
 // ─── Hook ────────────────────────────────────────────────────
-export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload" | "typing";
+export type SFXType = "click" | "success" | "alert" | "error" | "radio" | "dataload" | "typing" | "npc_message";
 
 export function useAudioManager(screen: ScreenType) {
   const ctxRef = useRef<AudioContext | null>(null);

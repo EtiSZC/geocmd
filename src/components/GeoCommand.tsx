@@ -2360,7 +2360,8 @@ export default function GeoCommand() {
       if (evt.data?.type === "NOTIFICATION_CLICK") {
         const tag: string = evt.data.tag || "";
         // Flash or shockwave → go to hub and refresh flash events
-        if (tag.startsWith("flash-") || tag.startsWith("shockwave-")) {
+        // Also handle the legacy default tag "geocmd-event" as a flash event (safety net)
+        if (tag.startsWith("flash-") || tag.startsWith("shockwave-") || tag === "geocmd-event" || tag === "") {
           await refreshFlashState(player.dbId);
           setScreen("hub");
         }

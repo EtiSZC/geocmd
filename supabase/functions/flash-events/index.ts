@@ -320,7 +320,7 @@ Urgency 3-5. Exactement 3 options avec des scoreDeltas entre -10 et +10.` },
       if (VAPID_PRIVATE_KEY) {
         const { data: subs } = await sb.from("push_subscriptions").select("subscription, notify_flash").eq("notify_flash", true);
         if (subs && subs.length > 0) {
-          const pushPayload = { title: `⚡ ${parsed.title}`, body: parsed.description?.slice(0, 120) || "Événement flash en cours !", url: "/" };
+          const pushPayload = { title: `⚡ ${parsed.title}`, body: parsed.description?.slice(0, 120) || "Événement flash en cours !", url: "/", tag: `flash-${flashEvent.id}` };
           await Promise.allSettled(subs.map((s: any) => sendPush(s.subscription, pushPayload, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY)));
         }
       }

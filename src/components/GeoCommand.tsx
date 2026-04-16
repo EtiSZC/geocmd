@@ -2617,6 +2617,21 @@ export default function GeoCommand() {
         {screen==="community"&&player&&(
           <CommunityScreen playerId={player.dbId} onBack={()=>setScreen("profile")}/>
         )}
+        {/* NPC Message Overlay */}
+        {npcMessage && (
+          <NpcMessageOverlay
+            message={npcMessage}
+            onDismiss={(id: string) => {
+              setNpcMessage(null);
+              try {
+                const key = "gc_dismissed_npc_messages";
+                const existing = JSON.parse(localStorage.getItem(key) || "[]");
+                existing.push(id);
+                localStorage.setItem(key, JSON.stringify(existing));
+              } catch {}
+            }}
+          />
+        )}
       </div>
     </div>
   );

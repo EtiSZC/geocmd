@@ -2454,7 +2454,15 @@ export default function GeoCommand() {
               respondedIds={respondedFlashIds}
               playerId={player.dbId}
               onRespond={handleFlashRespond}
-              onDismiss={(eventId: string) => setRespondedFlashIds(prev => [...prev, eventId])}
+              onDismiss={(eventId: string) => {
+                setRespondedFlashIds(prev => [...prev, eventId]);
+                try {
+                  const key = "gc_dismissed_shockwaves";
+                  const existing = JSON.parse(localStorage.getItem(key) || "[]");
+                  existing.push(eventId);
+                  localStorage.setItem(key, JSON.stringify(existing));
+                } catch {}
+              }}
               theaters={theaters}
             />
           </div>

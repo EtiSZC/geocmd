@@ -1,0 +1,1 @@
+ALTER TABLE public.push_subscriptions ADD COLUMN IF NOT EXISTS notify_npc boolean NOT NULL DEFAULT true;

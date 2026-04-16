@@ -2418,7 +2418,45 @@ export default function GeoCommand() {
     return () => clearInterval(iv);
   }, [player]);
 
-  const handleLogin = useCallback(async (p: any) => {
+  // NPC message polling — check on load + every 30 minutes
+  useEffect(() => {
+    if (!player) return;
+    const dismissed: string[] = (() => {
+      try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
+    })();
+
+    const checkNpcMessage = async () => {
+      try {
+        // First check for unread existing messages
+        const { data: existing } = await supabase
+          .from("npc_messages")
+          .select("*")
+          .eq("player_id", player.dbId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const unread = (existing || []).find((m: any) => !dismissed.includes(m.id));
+        if (unread) {
+          setNpcMessage(unread);
+          return;
+        }
+
+        // Try to generate a new one
+        const { data } = await supabase.functions.invoke("npc-message", {
+          body: { player_id: player.dbId },
+        });
+        if (data?.success && data.data) {
+          setNpcMessage(data.data);
+        }
+      } catch {}
+    };
+
+    checkNpcMessage();
+    const iv = setInterval(checkNpcMessage, 30 * 60 * 1000);
+    return () => clearInterval(iv);
+  }, [player]);
+
+
     audioManager.playSFX("success");
     const dbPlayer = await upsertPlayer(p.email, p.callsign);
     if (!dbPlayer) { setScreen("login"); return; }

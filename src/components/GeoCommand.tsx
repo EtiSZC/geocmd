@@ -491,12 +491,23 @@ const FB_ACTIONS = [
   { id:"a4", label:"Pression économique ciblée",           cat:"économique",     catColor:"#c8a84b", desc:"Sanctions sectorielles pour asphyxier les capacités adverses.", risk:"modéré", outcome:"Affaiblissement progressif sous 30 jours." },
 ];
 
-const FB_CONSEQUENCE = (scenario, actionLabel) => ({
-  headline: `Effets observés sur ${scenario.title}`,
-  narrative: `Les premiers rapports de terrain indiquent que la décision « ${actionLabel} » produit désormais des effets mesurables. La situation reste évolutive et une consolidation du renseignement est en cours avant le prochain briefing.`,
-  metrics: [],
-  scoreDeltas: { stability: 2, diplomacy: -1, military: 3, intelligence: 1 },
-});
+const FB_CONSEQUENCE = (scenario, actionLabel) => {
+  const scoreDeltas = { stability: 2, diplomacy: -1, military: 3, intelligence: 1 };
+  const fmt = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}%`;
+  const metrics = [
+    { label: "Stabilité régionale",   change: fmt(scoreDeltas.stability),   positive: scoreDeltas.stability   >= 0 },
+    { label: "Activité diplomatique", change: fmt(scoreDeltas.diplomacy),   positive: scoreDeltas.diplomacy   >= 0 },
+    { label: "Posture militaire",     change: fmt(scoreDeltas.military),    positive: scoreDeltas.military    >= 0 },
+    { label: "Renseignement",         change: fmt(scoreDeltas.intelligence),positive: scoreDeltas.intelligence >= 0 },
+  ];
+  return {
+    headline: `Effets observés sur ${scenario.title}`,
+    narrative: `Les premiers rapports de terrain indiquent que la décision « ${actionLabel} » produit désormais des effets mesurables. La situation reste évolutive et une consolidation du renseignement est en cours avant le prochain briefing.`,
+    metrics,
+    scoreDeltas,
+    degraded: true,
+  };
+};
 
 function TerminalLoader({ messages=[] }) {
   const [vis, setVis] = useState(0);
@@ -1104,6 +1115,25 @@ function TheaterView({ theater, theaterIndex, onDecisionMade, onBack, onDrop, pl
           <div style={{ marginBottom:20 }}>
             <div className="gc-m" style={{ fontSize:10, color:"#c8a84b", letterSpacing:2.5, marginBottom:8 }}>◈ EFFETS DE VOTRE DERNIÈRE DÉCISION</div>
             <div className="gc-consequence">
+              {theater.consequence.degraded && (
+                <div
+                  title="Synthèse automatique — données IA indisponibles au moment de la décision."
+                  className="gc-m"
+                  style={{
+                    display:"inline-block",
+                    fontSize:9,
+                    letterSpacing:2,
+                    padding:"3px 7px",
+                    border:"1px solid #b8862a",
+                    color:"#c8a84b",
+                    background:"transparent",
+                    marginBottom:8,
+                    textTransform:"uppercase",
+                  }}
+                >
+                  ⚠ Rapport préliminaire
+                </div>
+              )}
               <div className="gc-h" style={{ fontSize:16, fontWeight:600, marginBottom:6 }}>{theater.consequence.headline}</div>
               <p style={{ fontSize:13, color:"#8a9ab8", lineHeight:1.65 }}>{theater.consequence.narrative}</p>
               {theater.consequence.metrics?.length > 0 && (

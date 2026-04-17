@@ -2517,58 +2517,73 @@ export default function GeoCommand() {
     })();
   }, [refreshFlashState]);
 
-  // Listen for notification clicks from Service Worker
+  // Handle a notification tag (from SW message OR from ?n= URL param on cold start)
+  const handleNotificationTag = useCallback(async (tag: string) => {
+    if (!player) return;
+    if (tag.startsWith("flash-") || tag.startsWith("shockwave-") || tag === "geocmd-event" || tag === "") {
+      await refreshFlashState(player.dbId);
+      setScreen("hub");
+    } else if (tag.startsWith("npc-")) {
+      try {
+        const dismissed: string[] = (() => {
+          try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
+        })();
+        const { data: msgs } = await supabase
+          .from("npc_messages")
+          .select("*")
+          .eq("player_id", player.dbId)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const unread = (msgs || []).find((m: any) => !dismissed.includes(m.id));
+        if (unread) setNpcMessage(unread);
+      } catch {}
+      setScreen("hub");
+    } else if (tag.startsWith("theater-ready-")) {
+      const t = await loadTheaters(player.dbId);
+      setTheaters(t);
+      const theaterId = tag.replace("theater-ready-", "");
+      const idx = t.findIndex((th: any) => th.id === theaterId);
+      if (idx >= 0) {
+        setActiveIdx(idx);
+        setScreen("theater");
+      } else {
+        setScreen("hub");
+      }
+    } else {
+      setScreen("hub");
+    }
+  }, [player, refreshFlashState]);
+
+  // Listen for notification clicks from Service Worker (warm path)
   useEffect(() => {
     if (!player) return;
-    const handler = async (evt: MessageEvent) => {
+    const handler = (evt: MessageEvent) => {
       if (evt.data?.type === "NOTIFICATION_CLICK") {
-        const tag: string = evt.data.tag || "";
-        // Flash or shockwave → go to hub and refresh flash events
-        // Also handle the legacy default tag "geocmd-event" as a flash event (safety net)
-        if (tag.startsWith("flash-") || tag.startsWith("shockwave-") || tag === "geocmd-event" || tag === "") {
-          await refreshFlashState(player.dbId);
-          setScreen("hub");
-        }
-        // NPC message → load latest unread message and open hub
-        else if (tag.startsWith("npc-")) {
-          try {
-            const dismissed: string[] = (() => {
-              try { return JSON.parse(localStorage.getItem("gc_dismissed_npc_messages") || "[]"); } catch { return []; }
-            })();
-            const { data: msgs } = await supabase
-              .from("npc_messages")
-              .select("*")
-              .eq("player_id", player.dbId)
-              .order("created_at", { ascending: false })
-              .limit(5);
-            const unread = (msgs || []).find((m: any) => !dismissed.includes(m.id));
-            if (unread) setNpcMessage(unread);
-          } catch {}
-          setScreen("hub");
-        }
-        // Theater ready → go to hub and refresh theaters
-        else if (tag.startsWith("theater-ready-")) {
-          const t = await loadTheaters(player.dbId);
-          setTheaters(t);
-          // Extract theater ID from tag and navigate directly to it
-          const theaterId = tag.replace("theater-ready-", "");
-          const idx = t.findIndex((th: any) => th.id === theaterId);
-          if (idx >= 0) {
-            setActiveIdx(idx);
-            setScreen("theater");
-          } else {
-            setScreen("hub");
-          }
-        }
-        // Community or other → just go to hub
-        else {
-          setScreen("hub");
-        }
+        handleNotificationTag(evt.data.tag || "");
       }
     };
     navigator.serviceWorker?.addEventListener("message", handler);
     return () => navigator.serviceWorker?.removeEventListener("message", handler);
-  }, [player, refreshFlashState]);
+  }, [player, handleNotificationTag]);
+
+  // Cold-start path: read ?n=<tag> from URL once player is loaded
+  const coldStartTagHandled = useRef(false);
+  useEffect(() => {
+    if (!player || coldStartTagHandled.current) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tag = params.get("n");
+      if (tag) {
+        coldStartTagHandled.current = true;
+        handleNotificationTag(tag);
+        const params2 = new URLSearchParams(window.location.search);
+        params2.delete("n");
+        const qs = params2.toString();
+        const newUrl = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
+        window.history.replaceState({}, "", newUrl);
+      }
+    } catch {}
+  }, [player, handleNotificationTag]);
 
   // Realtime subscription for flash events + fallback polling every 60s
   useEffect(() => {

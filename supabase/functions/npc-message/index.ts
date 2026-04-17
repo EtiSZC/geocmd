@@ -248,15 +248,41 @@ ${recentActionsContext ? "\nContexte des actions récentes du joueur:\n" + recen
 
   const message = await callAI(system, userPrompt);
 
-  // Generate portrait if NPC doesn't have one
-  let portraitBase64 = npc.portrait_base64 || null;
+  // Re-fetch portrait juste avant génération pour éviter une race condition
+  // (deux appels concurrents qui génèrent chacun un portrait différent).
+  // Le portrait stocké dans npc_relationships est la SOURCE DE VÉRITÉ unique
+  // pour le visuel d'un PNJ — tous ses messages doivent l'utiliser.
+  let portraitBase64: string | null = null;
+  {
+    const { data: fresh } = await supabaseAdmin
+      .from("npc_relationships")
+      .select("portrait_base64")
+      .eq("id", npc.id)
+      .maybeSingle();
+    portraitBase64 = fresh?.portrait_base64 || null;
+  }
   if (!portraitBase64) {
-    portraitBase64 = await generatePortrait(npc.name, npc.role, npc.faction);
-    if (portraitBase64) {
-      await supabaseAdmin
+    const generated = await generatePortrait(npc.name, npc.role, npc.faction);
+    if (generated) {
+      // Update conditionnel : ne pas écraser un portrait posé par un appel concurrent
+      const { data: updated } = await supabaseAdmin
         .from("npc_relationships")
-        .update({ portrait_base64: portraitBase64 })
-        .eq("id", npc.id);
+        .update({ portrait_base64: generated })
+        .eq("id", npc.id)
+        .is("portrait_base64", null)
+        .select("portrait_base64")
+        .maybeSingle();
+      if (updated?.portrait_base64) {
+        portraitBase64 = updated.portrait_base64;
+      } else {
+        // Un autre appel a déjà posé un portrait — on le récupère et on l'utilise
+        const { data: existing } = await supabaseAdmin
+          .from("npc_relationships")
+          .select("portrait_base64")
+          .eq("id", npc.id)
+          .maybeSingle();
+        portraitBase64 = existing?.portrait_base64 || generated;
+      }
     }
   }
 

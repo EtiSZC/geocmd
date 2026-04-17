@@ -39,8 +39,15 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  const baseUrl = event.notification.data?.url || "/";
   const tag = event.notification.tag || "";
+
+  // Encode tag in URL so a cold-started app can read it on load
+  let targetUrl = baseUrl;
+  if (tag) {
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    targetUrl = `${baseUrl}${sep}n=${encodeURIComponent(tag)}`;
+  }
 
   event.waitUntil(
     self.clients
@@ -48,12 +55,13 @@ self.addEventListener("notificationclick", (event) => {
       .then((clientList) => {
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && "focus" in client) {
-            // Tell the app which notification was tapped
-            client.postMessage({ type: "NOTIFICATION_CLICK", tag, url });
+            // Tell the app which notification was tapped (warm path)
+            client.postMessage({ type: "NOTIFICATION_CLICK", tag, url: baseUrl });
             return client.focus();
           }
         }
-        return self.clients.openWindow(url);
+        // Cold start: open with tag in URL so app can act on it
+        return self.clients.openWindow(targetUrl);
       })
   );
 });
